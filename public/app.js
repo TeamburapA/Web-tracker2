@@ -4,24 +4,24 @@
 import { getToken, logout } from "./auth.js";
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const rowsEl          = document.getElementById("playerRows");
-const searchInput     = document.getElementById("searchInput");
-const sortSelect      = document.getElementById("sortSelect");
-const onlineCountEl   = document.getElementById("onlineCount");
-const totalCoinsEl    = document.getElementById("totalCoins");
-const totalUnitsEl    = document.getElementById("totalUnits");
-const copyAllBtn      = document.getElementById("copyAllBtn");
-const copyToast       = document.getElementById("copyToast");
-const scriptKeyEl     = document.getElementById("scriptKeyValue");
-const scriptKeyCopyBtn= document.getElementById("scriptKeyCopyBtn");
-const accountsListEl  = document.getElementById("accountsList");
+const rowsEl = document.getElementById("playerRows");
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+const onlineCountEl = document.getElementById("onlineCount");
+const totalCoinsEl = document.getElementById("totalCoins");
+const totalUnitsEl = document.getElementById("totalUnits");
+const copyAllBtn = document.getElementById("copyAllBtn");
+const copyToast = document.getElementById("copyToast");
+const scriptKeyEl = document.getElementById("scriptKeyValue");
+const scriptKeyCopyBtn = document.getElementById("scriptKeyCopyBtn");
+const accountsListEl = document.getElementById("accountsList");
 const accountsCountEl = document.getElementById("accountsCount");
-const userEmailEl     = document.getElementById("userEmail");
-const refreshBtn      = document.getElementById("refreshBtn");
+const userEmailEl = document.getElementById("userEmail");
+const refreshBtn = document.getElementById("refreshBtn");
 
-let players    = [];
-let serverNow  = Date.now();
-let authToken  = null;
+let players = [];
+let serverNow = Date.now();
+let authToken = null;
 let currentKey = null;   // user's script_key (set once from /api/me)
 
 // ── Auth token ────────────────────────────────────────────────────────────────
@@ -37,21 +37,20 @@ function authHeaders() {
 // ── Lua script template ───────────────────────────────────────────────────────
 function buildLuaScript(scriptKey) {
   const url = `${window.location.origin}/update`;
-  return `-- By.Chick Chick Dashboard Script
--- วางใน Roblox script ของคุณ (LocalScript)
 
+  return `-- By.Chick Chick Dashboard Script
 repeat task.wait(5) until game:IsLoaded()
 
 _G.ConfigGame = {
     Dashboard = {
         Enable = true,
-        Url    = "${url}",
-        Key    = "${scriptKey}",
+        Url = "${url}",
+        Key = "${scriptKey}",
         Interval = 5,
     },
 }
 
-local Players    = game:GetService("Players")
+local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
@@ -88,47 +87,52 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
     end
 
     local body = HttpService:JSONEncode({
-        script_key  = cfg.Key,
-        userId      = tostring(player.UserId),
-        name        = player.Name,
+        key = cfg.Key,
+        script_key = cfg.Key,
+        userId = tostring(player.UserId),
+        name = player.Name,
         displayName = player.DisplayName,
-        coins       = getCoins(),
-        status      = statusText or "Online",
-        placeId     = tostring(game.PlaceId),
-        jobId       = game.JobId,
-        UTC         = UTC    or 0,
-        UTS         = UTS    or 0,
-        TITAN       = TITAN  or 0,
-        Cenima      = Cenima or 0,
+        coins = getCoins(),
+        status = statusText or "Online",
+        placeId = tostring(game.PlaceId),
+        jobId = game.JobId,
+        UTC = UTC or 0,
+        UTS = UTS or 0,
+        TITAN = TITAN or 0,
+        Cenima = Cenima or 0,
     })
 
     task.spawn(function()
         local ok, result = pcall(function()
             return requestFunc({
-                Url    = cfg.Url,
+                Url = cfg.Url,
                 Method = "POST",
-                Headers = { ["Content-Type"] = "application/json" },
-                Body   = body,
+                Headers = {
+                    ["Content-Type"] = "application/json",
+                    ["X-Script-Key"] = cfg.Key or "",
+                },
+                Body = body,
             })
         end)
+
         if ok then
-            print("Dashboard OK:", result and result.StatusCode)
+            print("Dashboard response:", result and result.StatusCode, result and result.Body)
         else
-            warn("Dashboard failed:", result)
+            warn("Dashboard update failed:", result)
         end
     end)
 end
 
 while task.wait(1) do
-    local UTC    = 0
-    local UTS    = 0
-    local TITAN  = 0
+    local UTC = 0
+    local UTS = 0
+    local TITAN = 0
     local Cenima = 0
 
     pcall(function()
-        local lobby     = player.PlayerGui:FindFirstChild("Lobby")
+        local lobby = player.PlayerGui:FindFirstChild("Lobby")
         local unitFrame = lobby and lobby:FindFirstChild("UnitFrame")
-        local unitList  = unitFrame and unitFrame:FindFirstChild("UnitList")
+        local unitList = unitFrame and unitFrame:FindFirstChild("UnitList")
 
         if unitList then
             for _, row in pairs(unitList:GetChildren()) do
@@ -136,13 +140,15 @@ while task.wait(1) do
                     for _, desc in pairs(row:GetDescendants()) do
                         if desc.Name == "Price" and desc:IsA("TextLabel") then
                             local priceText = string.gsub(desc.Text, "%s+", "")
-                            local troop    = desc.Parent
+                            local troop = desc.Parent
                             local gradient = troop and troop:FindFirstChild("RarityGradient")
+
                             if gradient and gradient:IsA("UIGradient") then
                                 local kp = gradient.Color.Keypoints
-                                local r  = kp[1].Value.R
-                                local g  = kp[1].Value.G
-                                local b  = kp[1].Value.B
+                                local r = kp[1].Value.R
+                                local g = kp[1].Value.G
+                                local b = kp[1].Value.B
+
                                 if r >= 0.95 and g <= 0.05 and b <= 0.05 then
                                     if priceText == "$1500" then
                                         UTC = UTC + 1
@@ -162,16 +168,14 @@ while task.wait(1) do
 
     SendDashboardUpdate("Online", UTC, UTS, TITAN, Cenima)
     print("Sent Dashboard:", "Coins", getCoins(), "UTC", UTC, "UTS", UTS, "TITAN", TITAN, "Cenima", Cenima)
-end
-`;
+end`;
 }
-
 // ── Formatting ────────────────────────────────────────────────────────────────
 function formatNumber(v) { return Number(v || 0).toLocaleString("en-US"); }
 
 function timeAgo(ts) {
   const s = Math.max(0, Math.floor((serverNow - ts) / 1000));
-  if (s < 5)  return "now";
+  if (s < 5) return "now";
   if (s < 60) return `${s}s ago`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;
@@ -182,17 +186,17 @@ function isOnline(p) { return serverNow - Number(p.updatedAt || 0) < 30000; }
 
 function escapeHtml(v) {
   return String(v)
-    .replaceAll("&","&amp;").replaceAll("<","&lt;")
-    .replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
 // ── Sort ──────────────────────────────────────────────────────────────────────
 function sortedPlayers(list) {
   const sort = sortSelect?.value || "updated";
   return [...list].sort((a, b) => {
-    if (sort === "coins")  return (b.coins || 0) - (a.coins || 0);
-    if (sort === "utc")    return (b.units?.UTC || 0)    - (a.units?.UTC || 0);
-    if (sort === "uts")    return (b.units?.UTS || 0)    - (a.units?.UTS || 0);
+    if (sort === "coins") return (b.coins || 0) - (a.coins || 0);
+    if (sort === "utc") return (b.units?.UTC || 0) - (a.units?.UTC || 0);
+    if (sort === "uts") return (b.units?.UTS || 0) - (a.units?.UTS || 0);
     if (sort === "cinema") return (b.units?.Cinema || b.units?.Cenima || 0) - (a.units?.Cinema || a.units?.Cenima || 0);
     return (b.updatedAt || 0) - (a.updatedAt || 0);
   });
@@ -234,16 +238,16 @@ function render() {
     return `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
   });
 
-  const online     = players.filter(isOnline).length;
+  const online = players.filter(isOnline).length;
   const totalCoins = players.reduce((s, p) => s + Number(p.coins || 0), 0);
   const totalUnits = players.reduce((s, p) => {
     const u = p.units || {};
-    return s + Number(u.UTC||0) + Number(u.UTS||0) + Number(u.TITAN||0) + Number(u.Cinema||u.Cenima||0);
+    return s + Number(u.UTC || 0) + Number(u.UTS || 0) + Number(u.TITAN || 0) + Number(u.Cinema || u.Cenima || 0);
   }, 0);
 
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
-  if (totalCoinsEl)  totalCoinsEl.textContent  = formatNumber(totalCoins);
-  if (totalUnitsEl)  totalUnitsEl.textContent  = formatNumber(totalUnits);
+  if (totalCoinsEl) totalCoinsEl.textContent = formatNumber(totalCoins);
+  if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
 
   if (!filtered.length) {
     rowsEl.innerHTML = `<tr><td colspan="9" class="empty">ยังไม่มีข้อมูล — รัน script ใน Roblox ก่อนนะ</td></tr>`;
@@ -281,7 +285,7 @@ function renderAccounts(accounts) {
   }
   accountsListEl.innerHTML = accounts.map((a) => {
     const label = escapeHtml(a.display_name || a.roblox_username || a.roblox_user_id);
-    const sub   = escapeHtml(a.roblox_username || "");
+    const sub = escapeHtml(a.roblox_username || "");
     const lastSeen = a.last_seen_at
       ? new Date(a.last_seen_at).toLocaleString("th-TH")
       : "-";
@@ -368,7 +372,7 @@ async function loadPlayers() {
     const res = await fetch("/api/players", { headers: authHeaders(), cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
-    players   = data.players || [];
+    players = data.players || [];
     serverNow = data.now || Date.now();
     render();
   } catch {
@@ -400,7 +404,7 @@ copyAllBtn?.addEventListener("click", () => {
 accountsListEl?.addEventListener("click", (e) => {
   const btn = e.target.closest(".btn-unlink");
   if (!btn) return;
-  const robloxId   = btn.getAttribute("data-roblox-id");
+  const robloxId = btn.getAttribute("data-roblox-id");
   const robloxName = btn.getAttribute("data-roblox-name");
   if (robloxId) deleteAccount(robloxId, robloxName || robloxId);
 });
