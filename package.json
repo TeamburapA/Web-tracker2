@@ -1,0 +1,14 @@
+{
+  "name": "web-tracker2",
+  "version": "1.0.0",
+  "description": "By.Chick Chick Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "migrate": "node migrate-data.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "dotenv": "^16.5.0"
+  }
+}

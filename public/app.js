@@ -1,0 +1,431 @@
+/**
+ * app.js — Dashboard frontend (ES Module)
+ */
+import { getToken, logout } from "./auth.js";
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const rowsEl          = document.getElementById("playerRows");
+const searchInput     = document.getElementById("searchInput");
+const sortSelect      = document.getElementById("sortSelect");
+const onlineCountEl   = document.getElementById("onlineCount");
+const totalCoinsEl    = document.getElementById("totalCoins");
+const totalUnitsEl    = document.getElementById("totalUnits");
+const copyAllBtn      = document.getElementById("copyAllBtn");
+const copyToast       = document.getElementById("copyToast");
+const scriptKeyEl     = document.getElementById("scriptKeyValue");
+const scriptKeyCopyBtn= document.getElementById("scriptKeyCopyBtn");
+const accountsListEl  = document.getElementById("accountsList");
+const accountsCountEl = document.getElementById("accountsCount");
+const userEmailEl     = document.getElementById("userEmail");
+const refreshBtn      = document.getElementById("refreshBtn");
+
+let players    = [];
+let serverNow  = Date.now();
+let authToken  = null;
+let currentKey = null;   // user's script_key (set once from /api/me)
+
+// ── Auth token ────────────────────────────────────────────────────────────────
+async function ensureToken() {
+  if (!authToken) authToken = await getToken();
+  return authToken;
+}
+
+function authHeaders() {
+  return authToken ? { "Authorization": `Bearer ${authToken}` } : {};
+}
+
+// ── Lua script template ───────────────────────────────────────────────────────
+function buildLuaScript(scriptKey) {
+  const url = `${window.location.origin}/update`;
+  return `-- By.Chick Chick Dashboard Script
+-- วางใน Roblox script ของคุณ (LocalScript)
+
+repeat task.wait(5) until game:IsLoaded()
+
+_G.ConfigGame = {
+    Dashboard = {
+        Enable = true,
+        Url    = "${url}",
+        Key    = "${scriptKey}",
+        Interval = 5,
+    },
+}
+
+local Players    = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+repeat task.wait(.2) until player
+
+local lastDashboardSend = 0
+
+local function getCoins()
+    local stats = player:FindFirstChild("leaderstats")
+    local coins = stats and stats:FindFirstChild("Coins")
+    if not coins then return 0 end
+    return tonumber(coins.Value) or 0
+end
+
+local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
+    local cfg = _G.ConfigGame and _G.ConfigGame.Dashboard
+    if not cfg or not cfg.Enable then return end
+    if not cfg.Url or cfg.Url == "" then return end
+
+    if os.clock() - lastDashboardSend < (cfg.Interval or 5) then
+        return
+    end
+    lastDashboardSend = os.clock()
+
+    local requestFunc =
+        (syn and syn.request)
+        or (http and http.request)
+        or http_request
+        or request
+
+    if not requestFunc then
+        warn("Dashboard request function not found")
+        return
+    end
+
+    local body = HttpService:JSONEncode({
+        script_key  = cfg.Key,
+        userId      = tostring(player.UserId),
+        name        = player.Name,
+        displayName = player.DisplayName,
+        coins       = getCoins(),
+        status      = statusText or "Online",
+        placeId     = tostring(game.PlaceId),
+        jobId       = game.JobId,
+        UTC         = UTC    or 0,
+        UTS         = UTS    or 0,
+        TITAN       = TITAN  or 0,
+        Cenima      = Cenima or 0,
+    })
+
+    task.spawn(function()
+        local ok, result = pcall(function()
+            return requestFunc({
+                Url    = cfg.Url,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body   = body,
+            })
+        end)
+        if ok then
+            print("Dashboard OK:", result and result.StatusCode)
+        else
+            warn("Dashboard failed:", result)
+        end
+    end)
+end
+
+while task.wait(1) do
+    local UTC    = 0
+    local UTS    = 0
+    local TITAN  = 0
+    local Cenima = 0
+
+    pcall(function()
+        local lobby     = player.PlayerGui:FindFirstChild("Lobby")
+        local unitFrame = lobby and lobby:FindFirstChild("UnitFrame")
+        local unitList  = unitFrame and unitFrame:FindFirstChild("UnitList")
+
+        if unitList then
+            for _, row in pairs(unitList:GetChildren()) do
+                if string.sub(row.Name, 1, 3) == "Row" then
+                    for _, desc in pairs(row:GetDescendants()) do
+                        if desc.Name == "Price" and desc:IsA("TextLabel") then
+                            local priceText = string.gsub(desc.Text, "%s+", "")
+                            local troop    = desc.Parent
+                            local gradient = troop and troop:FindFirstChild("RarityGradient")
+                            if gradient and gradient:IsA("UIGradient") then
+                                local kp = gradient.Color.Keypoints
+                                local r  = kp[1].Value.R
+                                local g  = kp[1].Value.G
+                                local b  = kp[1].Value.B
+                                if r >= 0.95 and g <= 0.05 and b <= 0.05 then
+                                    if priceText == "$1500" then
+                                        UTC = UTC + 1
+                                    elseif priceText == "$1000" then
+                                        UTS = UTS + 1
+                                    elseif priceText == "$2000" then
+                                        Cenima = Cenima + 1
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    SendDashboardUpdate("Online", UTC, UTS, TITAN, Cenima)
+    print("Sent Dashboard:", "Coins", getCoins(), "UTC", UTC, "UTS", UTS, "TITAN", TITAN, "Cenima", Cenima)
+end
+`;
+}
+
+// ── Formatting ────────────────────────────────────────────────────────────────
+function formatNumber(v) { return Number(v || 0).toLocaleString("en-US"); }
+
+function timeAgo(ts) {
+  const s = Math.max(0, Math.floor((serverNow - ts) / 1000));
+  if (s < 5)  return "now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return `${Math.floor(m / 60)}h ago`;
+}
+
+function isOnline(p) { return serverNow - Number(p.updatedAt || 0) < 30000; }
+
+function escapeHtml(v) {
+  return String(v)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+function sortedPlayers(list) {
+  const sort = sortSelect?.value || "updated";
+  return [...list].sort((a, b) => {
+    if (sort === "coins")  return (b.coins || 0) - (a.coins || 0);
+    if (sort === "utc")    return (b.units?.UTC || 0)    - (a.units?.UTC || 0);
+    if (sort === "uts")    return (b.units?.UTS || 0)    - (a.units?.UTS || 0);
+    if (sort === "cinema") return (b.units?.Cinema || b.units?.Cenima || 0) - (a.units?.Cinema || a.units?.Cenima || 0);
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  });
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = "info") {
+  if (!copyToast) return;
+  copyToast.textContent = msg;
+  copyToast.className = `copy-toast toast-${type}`;
+  copyToast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { copyToast.hidden = true; }, 2000);
+}
+
+async function copyToClipboard(text) {
+  if (!text) { showToast("ไม่มีข้อความให้คัดลอก", "warn"); return false; }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("คัดลอกแล้ว ✓", "ok");
+    return true;
+  } catch {
+    const ta = Object.assign(document.createElement("textarea"), { value: text });
+    ta.style.cssText = "position:fixed;left:-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    showToast(ok ? "คัดลอกแล้ว ✓" : "คัดลอกไม่สำเร็จ", ok ? "ok" : "error");
+    return ok;
+  }
+}
+
+// ── Render dashboard table ────────────────────────────────────────────────────
+function render() {
+  const query = searchInput?.value.trim().toLowerCase() || "";
+  const filtered = sortedPlayers(players).filter((p) => {
+    return `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
+  });
+
+  const online     = players.filter(isOnline).length;
+  const totalCoins = players.reduce((s, p) => s + Number(p.coins || 0), 0);
+  const totalUnits = players.reduce((s, p) => {
+    const u = p.units || {};
+    return s + Number(u.UTC||0) + Number(u.UTS||0) + Number(u.TITAN||0) + Number(u.Cinema||u.Cenima||0);
+  }, 0);
+
+  if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
+  if (totalCoinsEl)  totalCoinsEl.textContent  = formatNumber(totalCoins);
+  if (totalUnitsEl)  totalUnitsEl.textContent  = formatNumber(totalUnits);
+
+  if (!filtered.length) {
+    rowsEl.innerHTML = `<tr><td colspan="9" class="empty">ยังไม่มีข้อมูล — รัน script ใน Roblox ก่อนนะ</td></tr>`;
+    return;
+  }
+
+  rowsEl.innerHTML = filtered.map((p) => {
+    const u = p.units || {};
+    const cinemaVal = u.Cinema || u.Cenima || 0;
+    const offCls = isOnline(p) ? "" : " offline";
+    return `
+      <tr>
+        <td class="account">
+          <strong>${escapeHtml(p.name || "Unknown")}</strong>
+          <span>ID: ${escapeHtml(String(p.userId || p.id || "-"))}</span>
+        </td>
+        <td class="num">${formatNumber(p.coins)}</td>
+        <td class="num utc">${formatNumber(u.UTC)}</td>
+        <td class="num uts">${formatNumber(u.UTS)}</td>
+        <td class="num titan">${formatNumber(u.TITAN)}</td>
+        <td class="num cenima">${formatNumber(cinemaVal)}</td>
+        <td><span class="pill${offCls}"><span class="dot"></span>${escapeHtml(p.status || "Online")}</span></td>
+        <td class="${offCls.trim()}">${timeAgo(p.updatedAt || 0)}</td>
+        <td><button class="btn-copy btn-copy-row" data-copy="${escapeHtml(String(p.userId || p.id || ""))}">Copy</button></td>
+      </tr>`;
+  }).join("");
+}
+
+// ── Render Roblox account badges ──────────────────────────────────────────────
+function renderAccounts(accounts) {
+  if (!accountsListEl) return;
+  if (!accounts.length) {
+    accountsListEl.innerHTML = `<span class="account-empty">ยังไม่มี Roblox account — รัน script ก่อน</span>`;
+    return;
+  }
+  accountsListEl.innerHTML = accounts.map((a) => {
+    const label = escapeHtml(a.display_name || a.roblox_username || a.roblox_user_id);
+    const sub   = escapeHtml(a.roblox_username || "");
+    const lastSeen = a.last_seen_at
+      ? new Date(a.last_seen_at).toLocaleString("th-TH")
+      : "-";
+    return `
+      <span class="account-badge" title="Last seen: ${lastSeen}">
+        🎮 <span class="badge-name">${label}</span>
+        ${sub && sub !== label ? `<span class="badge-sub">@${sub}</span>` : ""}
+        <button
+          class="btn-unlink"
+          data-roblox-id="${escapeHtml(a.roblox_user_id)}"
+          data-roblox-name="${escapeHtml(a.roblox_username || a.roblox_user_id)}"
+          title="ยกเลิก account นี้"
+          aria-label="ยกเลิก ${label}"
+        >×</button>
+      </span>`;
+  }).join("");
+}
+
+// ── Delete / unlink Roblox account ───────────────────────────────────────────
+async function deleteAccount(robloxUserId, displayName) {
+  if (!confirm(`ยืนยันการยกเลิก "${displayName}"?\nบัญชีนี้จะถูกลบออกจาก dashboard`)) return;
+
+  const token = await ensureToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch(`/api/accounts/${encodeURIComponent(robloxUserId)}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`ลบ ${displayName} แล้ว`, "ok");
+      await loadMe();
+      await loadPlayers();
+    } else {
+      showToast(`ลบไม่สำเร็จ: ${data.error}`, "error");
+    }
+  } catch (err) {
+    showToast("เกิดข้อผิดพลาด", "error");
+    console.error("deleteAccount error:", err);
+  }
+}
+
+// ── Load /api/me ──────────────────────────────────────────────────────────────
+async function loadMe() {
+  const token = await ensureToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch("/api/me", { headers: authHeaders(), cache: "no-store" });
+    if (!res.ok) return;
+    const { user } = await res.json();
+
+    if (userEmailEl) userEmailEl.textContent = user.email || "";
+
+    // แสดง script_key
+    if (scriptKeyEl && user.script_key) {
+      scriptKeyEl.textContent = user.script_key;
+      currentKey = user.script_key;
+    }
+
+    // แสดง roblox accounts
+    const accounts = user.roblox_accounts || [];
+    if (accountsCountEl) accountsCountEl.textContent = accounts.length;
+    renderAccounts(accounts);
+  } catch (err) {
+    console.warn("loadMe error:", err);
+  }
+}
+
+// ── Load /api/players ─────────────────────────────────────────────────────────
+async function loadPlayers() {
+  const token = await ensureToken();
+  if (!token) return;
+
+  // แสดง refresh spinner
+  if (refreshBtn) {
+    refreshBtn.classList.add("spinning");
+    refreshBtn.disabled = true;
+  }
+
+  try {
+    const res = await fetch("/api/players", { headers: authHeaders(), cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    players   = data.players || [];
+    serverNow = data.now || Date.now();
+    render();
+  } catch {
+    rowsEl.innerHTML = `<tr><td colspan="9" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
+  } finally {
+    if (refreshBtn) {
+      refreshBtn.classList.remove("spinning");
+      refreshBtn.disabled = false;
+    }
+  }
+}
+
+// ── Script key copy ───────────────────────────────────────────────────────────
+scriptKeyCopyBtn?.addEventListener("click", () => {
+  const key = scriptKeyEl?.textContent?.trim();
+  if (key) copyToClipboard(key);
+});
+
+// ── Copy Script button — generate Lua with user's key baked in ────────────────
+copyAllBtn?.addEventListener("click", () => {
+  if (!currentKey) {
+    showToast("รอ script key โหลดก่อน...", "warn");
+    return;
+  }
+  copyToClipboard(buildLuaScript(currentKey));
+});
+
+// ── Unlink buttons (event delegation on accountsList) ────────────────────────
+accountsListEl?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn-unlink");
+  if (!btn) return;
+  const robloxId   = btn.getAttribute("data-roblox-id");
+  const robloxName = btn.getAttribute("data-roblox-name");
+  if (robloxId) deleteAccount(robloxId, robloxName || robloxId);
+});
+
+// ── Refresh button ────────────────────────────────────────────────────────────
+refreshBtn?.addEventListener("click", async () => {
+  await loadPlayers();
+  showToast("อัปเดตแล้ว ✓", "ok");
+});
+
+// ── Row copy buttons ──────────────────────────────────────────────────────────
+rowsEl?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-copy]");
+  if (btn) copyToClipboard(btn.getAttribute("data-copy") ?? "");
+});
+
+// ── Search / sort ─────────────────────────────────────────────────────────────
+searchInput?.addEventListener("input", render);
+sortSelect?.addEventListener("change", render);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await ensureToken();
+  await loadMe();
+  await loadPlayers();
+  setInterval(loadPlayers, 5000);
+  setInterval(loadMe, 30000);
+})();

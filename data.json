@@ -1,0 +1,40 @@
+{
+  "players": {
+    "test-local": {
+      "id": "test-local",
+      "userId": "test-local",
+      "name": "TestLocal",
+      "displayName": "",
+      "coins": 123,
+      "status": "Online",
+      "placeId": "",
+      "jobId": "",
+      "units": {
+        "UTC": 1,
+        "UTS": 2,
+        "TITAN": 3,
+        "Cenima": 4
+      },
+      "firstSeenAt": 1779136589070,
+      "updatedAt": 1779136589070
+    },
+    "10971894488": {
+      "id": "10971894488",
+      "userId": 10971894488,
+      "name": "teamjavis",
+      "displayName": "teamjavis",
+      "coins": 0,
+      "status": "Online",
+      "placeId": 93712201161812,
+      "jobId": "ce3800af-8753-45f7-8b5d-660677f6ba89",
+      "units": {
+        "UTC": 0,
+        "UTS": 0,
+        "TITAN": 0,
+        "Cenima": 0
+      },
+      "firstSeenAt": 1779140918582,
+      "updatedAt": 1779140933282
+    }
+  }
+}

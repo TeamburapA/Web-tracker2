@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>By.Chick Chick Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <main class="app">
+
+    <!-- ── Top bar ─────────────────────────────────────────── -->
+    <section class="topbar">
+      <div class="topbar-left">
+        <h1>By.Chick Chick</h1>
+        <p class="topbar-sub">Dashboard</p>
+      </div>
+      <div class="topbar-right">
+        <div class="summary">
+          <div>
+            <span id="onlineCount">0</span>
+            <label>Online</label>
+          </div>
+          <div>
+            <span id="totalCoins">0</span>
+            <label>Coins</label>
+          </div>
+          <div>
+            <span id="totalUnits">0</span>
+            <label>Units</label>
+          </div>
+        </div>
+        <div class="user-info">
+          <span id="userEmail" class="user-email"></span>
+          <button id="logoutBtn" class="btn-logout" title="ออกจากระบบ">🚪 ออก</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Script Key Panel ────────────────────────────────── -->
+    <section class="key-panel">
+      <div class="key-panel-left">
+        <div class="key-label">
+          🔑 Script Key ของคุณ
+          <span class="key-hint">— นำไปวางใน Roblox script</span>
+        </div>
+        <div class="key-display">
+          <code id="scriptKeyValue">กำลังโหลด...</code>
+          <button id="scriptKeyCopyBtn" class="btn-key-copy">📋 Copy</button>
+        </div>
+      </div>
+      <div class="key-panel-right">
+        <div class="accounts-header">
+          🎮 Roblox Accounts ที่ตรวจพบ
+          <span class="accounts-badge" id="accountsCount">0</span>
+        </div>
+        <div id="accountsList" class="accounts-list">
+          <span class="account-empty">รัน script ใน Roblox เพื่อเพิ่ม account</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Filters + Copy Script ───────────────────────────── -->
+    <section class="filters">
+      <input id="searchInput" type="search" placeholder="ค้นหา ID หรือชื่อ" />
+      <select id="sortSelect">
+        <option value="updated">อัปเดตล่าสุด</option>
+        <option value="coins">Coins มากสุด</option>
+        <option value="utc">UTC มากสุด</option>
+        <option value="uts">UTS มากสุด</option>
+        <option value="cinema">Cinema มากสุด</option>
+      </select>
+      <button type="button" id="copyAllBtn" class="btn-copy" title="คัดลอก Roblox script">
+        📜 Copy Script
+      </button>
+      <button type="button" id="refreshBtn" class="btn-refresh" title="รีเฟรชข้อมูล">
+        <span class="refresh-icon">↻</span>
+      </button>
+    </section>
+
+    <!-- ── Players Table ──────────────────────────────────── -->
+    <section class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Coins</th>
+            <th>UTC</th>
+            <th>UTS</th>
+            <th>TITAN</th>
+            <th>Cinema</th>
+            <th>Status</th>
+            <th>Last Update</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="playerRows">
+          <tr>
+            <td colspan="9" class="empty">กำลังโหลด...</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <div id="copyToast" class="copy-toast" hidden>คัดลอกแล้ว</div>
+
+  <!-- auth.js guard + app.js logic (both modules) -->
+  <script type="module" src="/app.js"></script>
+</body>
+
+</html>
