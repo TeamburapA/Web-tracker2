@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="th" class="dark">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register — By.Chick Chick</title>
+  <title>Register - By.Chick Chick</title>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/theme.css" />
   <link rel="stylesheet" href="/css/auth.css" />
@@ -14,12 +14,12 @@
   <div class="auth-bg-mesh" aria-hidden="true"></div>
   <div class="auth-bg-grid" aria-hidden="true"></div>
 
-  <main class="auth-wrap">
-    <div class="auth-card auth-card--register">
+  <main class="auth-wrap auth-wrap--register">
+    <section class="auth-card auth-card--register" aria-label="Register">
       <header class="auth-header">
         <div class="chick-icon">🐥</div>
-        <h1 class="auth-title">สมัครสมาชิก</h1>
-        <p class="auth-subtitle">สร้างบัญชีเพื่อใช้ Dashboard และ Script Key</p>
+        <h1 class="auth-title">Register</h1>
+        <p class="auth-subtitle">Join the Elite Gaming Suite and access real-time statistical insights.</p>
       </header>
 
       <div id="authError" class="auth-alert auth-alert-error" hidden></div>
@@ -30,62 +30,53 @@
           <label for="regEmail">Email Address</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">mail</span>
-            <input id="regEmail" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+            <input id="regEmail" type="email" name="email" placeholder="commander@gaming.pro" autocomplete="email" required />
           </div>
         </div>
+
         <div class="field">
-          <label for="regPassword">Create Password <span class="field-hint">(อย่างน้อย 6 ตัว)</span></label>
+          <label for="regPassword">Create Password</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">lock</span>
-            <input id="regPassword" type="password" name="password" placeholder="••••••••" autocomplete="new-password" required minlength="6" />
-            <button type="button" class="toggle-pw" id="togglePwReg" aria-label="แสดง/ซ่อนรหัสผ่าน">
+            <input id="regPassword" type="password" name="password" placeholder="••••••••" autocomplete="new-password" required />
+            <button type="button" class="toggle-pw" id="togglePwReg" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
           </div>
         </div>
+
         <div class="field">
           <label for="regConfirm">Confirm Password</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">shield_lock</span>
             <input id="regConfirm" type="password" name="confirm" placeholder="••••••••" autocomplete="new-password" required />
-            <button type="button" class="toggle-pw" id="togglePwCfm" aria-label="แสดง/ซ่อนรหัสผ่าน">
+            <button type="button" class="toggle-pw" id="togglePwCfm" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
           </div>
         </div>
+
         <button type="submit" class="btn-primary" id="registerBtn">
-          <span class="btn-text">สมัครสมาชิก</span>
+          <span class="btn-text">Create Account</span>
           <span class="material-symbols-outlined">rocket_launch</span>
           <span class="btn-spinner" hidden></span>
         </button>
       </form>
 
-      <footer class="auth-footer">
-        มีบัญชีอยู่แล้ว?
-        <a href="/login.html">เข้าสู่ระบบ</a>
-      </footer>
-    </div>
+      <p class="auth-footer">
+        Already part of the squad?
+        <a href="/login.html">Log in here</a>
+      </p>
+    </section>
 
     <div class="auth-features" aria-hidden="true">
-      <div class="auth-feature">
-        <span class="material-symbols-outlined text-secondary">verified_user</span>
-        <span>Encrypted</span>
-      </div>
-      <div class="auth-feature">
-        <span class="material-symbols-outlined text-primary">query_stats</span>
-        <span>Live Data</span>
-      </div>
-      <div class="auth-feature">
-        <span class="material-symbols-outlined" style="color: var(--tertiary)">bolt</span>
-        <span>Fast Access</span>
-      </div>
+      <span class="auth-feature"><span class="material-symbols-outlined">shield</span>Secure</span>
+      <span class="auth-feature"><span class="material-symbols-outlined">query_stats</span>Analytics</span>
+      <span class="auth-feature"><span class="material-symbols-outlined">bolt</span>Fast Access</span>
     </div>
   </main>
 
-  <div class="auth-status-pill" aria-hidden="true">
-    <span class="dot-online"></span>
-    Global Servers: Online
-  </div>
+  <div class="auth-status-pill"><span class="dot-online"></span>Global Servers: Online</div>
 
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/ui.js"></script>

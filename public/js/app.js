@@ -202,15 +202,20 @@ function render() {
 
     return `
       <tr>
-        <td class="account">
-          <strong>${escapeHtml(p.name || "Unknown")}</strong>
-          <span>ID: ${escapeHtml(String(p.userId || p.id || "-"))}</span>
+        <td>
+          <div class="account">
+            <span class="account-avatar" aria-hidden="true"></span>
+            <div>
+              <strong>${escapeHtml(p.name || "Unknown")}</strong>
+              <span>ID: ${escapeHtml(String(p.userId || p.id || "-"))}</span>
+            </div>
+          </div>
         </td>
-        <td class="num">${formatNumber(p.coins)}</td>
-        <td class="num utc">${formatNumber(u.UTC)}</td>
-        <td class="num uts">${formatNumber(u.UTS)}</td>
-        <td class="num cenima">${formatNumber(cinemaCount(u))}</td>
-        <td><span class="pill${offCls}"><span class="dot"></span>${escapeHtml(p.status || "Online")}</span></td>
+        <td><span class="num coin-num">${formatNumber(p.coins)}</span></td>
+        <td><span class="num utc">${formatNumber(u.UTC)}</span></td>
+        <td><span class="num uts">${formatNumber(u.UTS)}</span></td>
+        <td><span class="cenima">Lobby_${formatNumber(cinemaCount(u))}</span></td>
+        <td><span class="pill${offCls}"><span class="dot"></span>${escapeHtml(p.status || (isOnline(p) ? "Active" : "Offline"))}</span></td>
         <td class="${offCls.trim()}">${timeAgo(p.updatedAt || 0)}</td>
         <td><button class="btn-copy btn-copy-row" data-copy="${escapeHtml(String(p.userId || p.id || ""))}">Copy</button></td>
       </tr>`;
@@ -233,7 +238,7 @@ function renderAccounts(accounts) {
 
     return `
       <span class="account-badge" title="Last seen: ${lastSeen}">
-        🎮 <span class="badge-name">${label}</span>
+        <span class="badge-name">${label}</span>
         ${sub && sub !== label ? `<span class="badge-sub">@${sub}</span>` : ""}
         <button
           class="btn-unlink"

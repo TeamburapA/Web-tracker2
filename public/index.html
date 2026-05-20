@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th" class="dark">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="utf-8" />
@@ -31,54 +31,78 @@
         </div>
       </div>
     </div>
+
+    <nav class="dash-tabs" aria-label="Dashboard sections">
+      <a class="dash-tab active" href="/">Stats</a>
+      <a class="dash-tab" href="#keys">Keys</a>
+      <a class="dash-tab" href="#market">Market</a>
+    </nav>
+
     <div class="dash-header-right user-info">
+      <button type="button" id="copyAllBtn" class="btn-copy btn-copy--top">
+        Copy Key
+      </button>
+      <button class="icon-btn" type="button" aria-label="Notifications">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <span class="user-avatar" aria-hidden="true">🐥</span>
       <span id="userEmail" class="user-email"></span>
-      <button type="button" id="logoutBtn" class="btn-logout" title="ออกจากระบบ">Logout</button>
+      <button type="button" id="logoutBtn" class="btn-logout" title="Logout">Logout</button>
     </div>
   </header>
 
   <main class="app">
-    <section class="key-panel glass-card glow-border-purple">
-      <div class="key-panel-left">
-        <div class="key-label">
-          Script Key ของคุณ
-          <span class="key-hint">— นำไปวางใน Roblox script</span>
-        </div>
-        <div class="key-display">
-          <code id="scriptKeyValue">กำลังโหลด...</code>
-          <button type="button" id="scriptKeyCopyBtn" class="btn-key-copy">
-            <span class="material-symbols-outlined" style="font-size:16px">content_copy</span>
-            Copy
-          </button>
-        </div>
+    <section class="hero-panel" id="keys">
+      <div class="hero-copy">
+        <h1>Active Script Key</h1>
+        <p>Universal Execution Authorization</p>
       </div>
-      <div class="key-panel-right">
-        <div class="accounts-header">
-          Roblox Accounts
-          <span class="accounts-badge" id="accountsCount">0</span>
-        </div>
+      <div class="key-valid-pill"><span></span>Valid: 24D 12H</div>
+      <span class="hero-key-mark material-symbols-outlined" aria-hidden="true">vpn_key</span>
+    </section>
+
+    <section class="key-panel">
+      <div class="key-display">
+        <code id="scriptKeyValue">Loading...</code>
+        <button type="button" id="scriptKeyCopyBtn" class="btn-key-copy">
+          <span class="material-symbols-outlined">content_copy</span>
+          Copy
+        </button>
+      </div>
+    </section>
+
+    <section class="accounts-panel">
+      <div class="accounts-header">Linked Roblox Accounts</div>
+      <div class="accounts-row">
         <div id="accountsList" class="accounts-list">
-          <span class="account-empty">รัน script ใน Roblox เพื่อเพิ่ม account</span>
+          <span class="account-empty">Run script in Roblox to link account</span>
         </div>
+        <button type="button" class="btn-link-account">+ Link Account</button>
       </div>
+      <span id="accountsCount" class="accounts-count-sr">0</span>
     </section>
 
     <section class="table-section glass-card">
       <div class="filters">
-        <input id="searchInput" type="search" placeholder="ค้นหา ID หรือชื่อ" />
+        <label class="search-box" for="searchInput">
+          <span class="material-symbols-outlined">search</span>
+          <input id="searchInput" type="search" placeholder="Search accounts or IDs..." />
+        </label>
+        <label class="sort-label" for="sortSelect">Sort by:</label>
         <select id="sortSelect">
-          <option value="updated">อัปเดตล่าสุด</option>
-          <option value="coins">Coins มากสุด</option>
-          <option value="utc">UTC มากสุด</option>
-          <option value="uts">UTS มากสุด</option>
-          <option value="cinema">CINEMA มากสุด</option>
+          <option value="coins">Coins (High)</option>
+          <option value="updated">Last Update</option>
+          <option value="utc">UTC (High)</option>
+          <option value="uts">UTS (High)</option>
+          <option value="cinema">Cinema (High)</option>
         </select>
-        <button type="button" id="copyAllBtn" class="btn-copy" title="คัดลอก Roblox script">
-          <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">terminal</span>
+        <button type="button" id="copyScriptBtnMirror" class="btn-copy btn-copy--table">
+          <span class="material-symbols-outlined">terminal</span>
           Copy Script
         </button>
-        <button type="button" id="refreshBtn" class="btn-refresh" title="รีเฟรชข้อมูล">
+        <button type="button" id="refreshBtn" class="btn-refresh" title="Refresh">
           <span class="refresh-icon material-symbols-outlined">refresh</span>
+          Refresh
         </button>
       </div>
 
@@ -90,24 +114,40 @@
               <th>Coins</th>
               <th>UTC</th>
               <th>UTS</th>
-              <th>CINEMA</th>
+              <th>Cinema</th>
               <th>Status</th>
               <th>Last Update</th>
-              <th></th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="playerRows">
             <tr>
-              <td colspan="8" class="empty">กำลังโหลด...</td>
+              <td colspan="8" class="empty">Loading...</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <footer class="table-footer">
+        <span>Showing 1-10 of 42 accounts</span>
+        <div class="pager" aria-hidden="true">
+          <button>Previous</button>
+          <button class="active">1</button>
+          <button>2</button>
+          <button>3</button>
+          <button>Next</button>
+        </div>
+      </footer>
     </section>
   </main>
 
-  <div id="copyToast" class="copy-toast" hidden>คัดลอกแล้ว</div>
+  <div id="copyToast" class="copy-toast" hidden>Copied</div>
 
+  <script>
+    document.getElementById("copyScriptBtnMirror")?.addEventListener("click", () => {
+      document.getElementById("copyAllBtn")?.click();
+    });
+  </script>
   <script type="module" src="/js/app.js"></script>
 </body>
 
