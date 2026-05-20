@@ -1,7 +1,7 @@
 /**
  * app.js — Dashboard frontend (ES Module)
  */
-import { getToken, logout } from "./auth.js";
+import { getToken, logout, initGuard, clearSession } from "./auth.js";
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const rowsEl = document.getElementById("playerRows");
@@ -74,7 +74,7 @@ async function buildLuaScript(scriptKey) {
 function formatNumber(v) {
   return Number(v || 0).toLocaleString("en-US");
 }
-function stopPollingAndLogin() {
+async function stopPollingAndLogin() {
   if (playersTimer) clearInterval(playersTimer);
   if (meTimer) clearInterval(meTimer);
 
@@ -82,6 +82,7 @@ function stopPollingAndLogin() {
   meTimer = null;
   authToken = null;
 
+  await clearSession();
   window.location.replace("/login.html");
 }
 
@@ -417,10 +418,13 @@ sortSelect?.addEventListener("change", render);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async () => {
+  const ok = await initGuard();
+  if (!ok) return;
+
   await ensureToken();
   await loadMe();
   await loadPlayers();
 
-playersTimer = setInterval(loadPlayers, 5000);
-meTimer = setInterval(loadMe, 30000);
+  playersTimer = setInterval(loadPlayers, 5000);
+  meTimer = setInterval(loadMe, 30000);
 })();

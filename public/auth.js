@@ -28,16 +28,36 @@ export async function getToken() {
   } = await sb.auth.getSession();
 
   if (!session?.access_token) {
-    const refreshed = await sb.auth.refreshSession();
-    session = refreshed.data.session;
+    const { data: { session: refreshed }, error } = await sb.auth.refreshSession();
+    if (error || !refreshed?.access_token) {
+      await sb.auth.signOut();
+      return null;
+    }
+    return refreshed.access_token;
   }
 
-  return session?.access_token || null;
+  const expiresAt = (session.expires_at || 0) * 1000;
+  if (expiresAt && Date.now() >= expiresAt - 60_000) {
+    const { data: { session: refreshed }, error } = await sb.auth.refreshSession();
+    if (error || !refreshed?.access_token) {
+      await sb.auth.signOut();
+      return null;
+    }
+    return refreshed.access_token;
+  }
+
+  return session.access_token;
 }
-/** Logout แล้ว redirect ไป login */
-export async function logout() {
+
+/** ล้าง session (ใช้เมื่อ token หมดอายุหรือ API คืน 401) */
+export async function clearSession() {
   const sb = await getSupabase();
   await sb.auth.signOut();
+}
+
+/** Logout แล้ว redirect ไป login */
+export async function logout() {
+  await clearSession();
   location.replace("/login.html");
 }
 
@@ -93,7 +113,7 @@ function bindToggle(btnId, inputId) {
 }
 
 // ── Session guard ─────────────────────────────────────────────────────────────
-async function initGuard() {
+export async function initGuard() {
   const sb = await getSupabase();
   const { data: { session } } = await sb.auth.getSession();
 
@@ -101,10 +121,22 @@ async function initGuard() {
     location.replace("/login.html");
     return false;
   }
+
   if ((page.isLogin() || page.isRegister()) && session) {
-    location.replace("/");
-    return false;
+    const token = session.access_token;
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      location.replace("/");
+      return false;
+    }
+
+    await sb.auth.signOut();
   }
+
   return true;
 }
 
