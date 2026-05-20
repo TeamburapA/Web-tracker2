@@ -106,6 +106,30 @@ function normalizeItemId(name) {
     .replace(/^_+|_+$/g, "");
 }
 
+function itemNameFromId(itemId) {
+  const id = String(itemId || "").toLowerCase();
+  if (id === "utc") return "UTC";
+  if (id === "uts") return "UTS";
+  if (id === "cinema" || id === "cenima" || id === "titan") return "Cinema";
+  return String(itemId || "");
+}
+
+function normalizeUnitsObject(units) {
+  const out = {};
+
+  for (const [key, value] of Object.entries(units || {})) {
+    const name = normalizeItemName(key);
+    const num = Number(value || 0);
+    if (name === "Cinema") {
+      out.Cinema = Math.max(out.Cinema || 0, num);
+    } else {
+      out[name] = num;
+    }
+  }
+
+  return out;
+}
+
 function normalizeUnits(payload) {
   const raw = { ...(payload.units || {}) };
   const SKIP = new Set(["key", "script_key", "userId", "id", "name", "displayName", "coins", "status", "placeId", "placeName", "jobId"]);
@@ -122,13 +146,22 @@ function normalizeUnits(payload) {
     const itemName = normalizeItemName(name);
     const itemId = normalizeItemId(itemName);
     if (!itemId) continue;
-    units[itemName] = Number(value || 0);
+    units[itemName] = Math.max(units[itemName] || 0, Number(value || 0));
   }
 
   return units;
 }
 
 function rowToPlayer(row) {
+  const rawUnits = {
+    ...(row.units || {}),
+    ...(row.utc != null ? { UTC: row.utc } : {}),
+    ...(row.uts != null ? { UTS: row.uts } : {}),
+    ...(row.cenima != null ? { Cenima: row.cenima } : {}),
+    ...(row.cinema != null ? { Cinema: row.cinema } : {}),
+    ...(row.titan != null ? { TITAN: row.titan } : {}),
+  };
+
   return {
     id: row.id,
     userId: row.user_id,
@@ -139,7 +172,7 @@ function rowToPlayer(row) {
     placeId: row.place_id,
     placeName: row.place_name,
     jobId: row.job_id,
-    units: row.units || {},
+    units: normalizeUnitsObject(rawUnits),
     firstSeenAt: Number(row.first_seen_at || 0),
     updatedAt: Number(row.updated_at || 0),
   };
@@ -164,6 +197,102 @@ function normalizeUpdate(payload) {
   };
 }
 
+async function getPlayersFromInventory(robloxIds) {
+  const db = getSupabase();
+
+  const { data: profiles, error: profErr } = await db
+    .from("player_profiles")
+    .select("player_id, roblox_user_id, username, display_name")
+    .in("roblox_user_id", robloxIds);
+
+  if (profErr) throw profErr;
+  if (!profiles?.length) return [];
+
+  const playerIds = profiles.map((p) => p.player_id);
+  const profileByPlayerId = Object.fromEntries(profiles.map((p) => [p.player_id, p]));
+
+  const { data: states, error: stErr } = await db
+    .from("player_place_state")
+    .select("player_id, place_id, job_id, status, coins, last_seen_at, updated_at")
+    .in("player_id", playerIds)
+    .order("updated_at", { ascending: false });
+
+  if (stErr) throw stErr;
+  if (!states?.length) return [];
+
+  const { data: inventory, error: invErr } = await db
+    .from("player_inventory")
+    .select("player_id, place_id, item_id, amount")
+    .in("player_id", playerIds);
+
+  if (invErr) throw invErr;
+
+  const itemIds = [...new Set((inventory || []).map((r) => r.item_id))];
+  let itemNameById = {};
+
+  if (itemIds.length) {
+    const { data: items, error: itemErr } = await db
+      .from("game_items")
+      .select("item_id, item_name")
+      .in("item_id", itemIds);
+
+    if (!itemErr && items) {
+      itemNameById = Object.fromEntries(items.map((i) => [i.item_id, i.item_name]));
+    }
+  }
+
+  const inventoryByKey = {};
+  for (const row of inventory || []) {
+    const key = `${row.player_id}:${row.place_id}`;
+    if (!inventoryByKey[key]) inventoryByKey[key] = {};
+
+    const itemName = itemNameById[row.item_id] || itemNameFromId(row.item_id);
+    const canonical = normalizeItemName(itemName);
+    const num = Number(row.amount || 0);
+
+    if (canonical === "Cinema") {
+      inventoryByKey[key].Cinema = Math.max(inventoryByKey[key].Cinema || 0, num);
+    } else {
+      inventoryByKey[key][canonical] = num;
+    }
+  }
+
+  const placeIds = [...new Set(states.map((s) => s.place_id).filter(Boolean))];
+  let placeNameById = {};
+
+  if (placeIds.length) {
+    const { data: places } = await db
+      .from("game_places")
+      .select("place_id, place_name")
+      .in("place_id", placeIds);
+
+    if (places) {
+      placeNameById = Object.fromEntries(places.map((p) => [p.place_id, p.place_name]));
+    }
+  }
+
+  return states.map((state) => {
+    const prof = profileByPlayerId[state.player_id] || {};
+    const invKey = `${state.player_id}:${state.place_id}`;
+    const units = normalizeUnitsObject(inventoryByKey[invKey] || {});
+
+    return {
+      id: state.player_id,
+      userId: prof.roblox_user_id || state.player_id,
+      name: prof.username || "Unknown",
+      displayName: prof.display_name || "",
+      coins: Number(state.coins || 0),
+      status: state.status || "Online",
+      placeId: state.place_id,
+      placeName: placeNameById[state.place_id] || state.place_id,
+      jobId: state.job_id || "",
+      units,
+      firstSeenAt: state.last_seen_at ? new Date(state.last_seen_at).getTime() : 0,
+      updatedAt: state.updated_at ? new Date(state.updated_at).getTime() : 0,
+    };
+  });
+}
+
 async function getPlayersByUserId(userId) {
   const { data: accounts, error: accErr } = await getSupabase()
     .from("user_roblox_accounts")
@@ -174,6 +303,13 @@ async function getPlayersByUserId(userId) {
   if (!accounts?.length) return [];
 
   const robloxIds = accounts.map((a) => a.roblox_user_id);
+
+  try {
+    const fromInventory = await getPlayersFromInventory(robloxIds);
+    if (fromInventory.length) return fromInventory;
+  } catch (err) {
+    console.warn("getPlayersFromInventory failed, falling back to view:", err.message);
+  }
 
   const { data, error } = await getSupabase()
     .from("dashboard_player_places")

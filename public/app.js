@@ -102,7 +102,9 @@ function isOnline(p) {
 }
 
 function cinemaCount(u = {}) {
-  return Number(u.Cinema || u.Cenima || u.TITAN || 0);
+  return Number(
+    u.Cinema ?? u.Cenima ?? u.cinema ?? u.cenima ?? u.TITAN ?? u.titan ?? 0
+  );
 }
 
 function escapeHtml(v) {
