@@ -40,7 +40,7 @@ async function buildLuaScript(scriptKey) {
   const res = await fetch("/message.txt", { cache: "no-store" });
 
   if (!res.ok) {
-    throw new Error("โหลด message.txt ไม่สำเร็จ");
+    throw new Error(`โหลด message.txt ไม่สำเร็จ: ${res.status}`);
   }
 
   let script = await res.text();
@@ -48,11 +48,6 @@ async function buildLuaScript(scriptKey) {
   script = script.replaceAll(
     'Key = "เอา_script_key_จากหน้าเว็บมาใส่ตรงนี้"',
     `Key = "${scriptKey}"`
-  );
-
-  script = script.replaceAll(
-    'Url = "https://web-tracker2.vercel.app/update"',
-    `Url = "${window.location.origin}/update"`
   );
 
   script = script.replaceAll(
@@ -316,24 +311,26 @@ async function loadPlayers() {
 }
 
 // ── Script key copy ───────────────────────────────────────────────────────────
-scriptKeyCopyBtn?.addEventListener("click", () => {
-  const key = scriptKeyEl?.textContent?.trim();
-  if (key) copyToClipboard(key);
-});
-
-// ── Copy Script button — load message.txt and inject user's key ───────────────
 copyAllBtn?.addEventListener("click", async () => {
   if (!currentKey) {
-    showToast("รอ script key โหลดก่อน...", "warn");
+    showToast("ยังไม่มี Script Key กรุณารอโหลดหรือล็อกอินใหม่", "warn");
     return;
   }
 
   try {
+    showToast("กำลังสร้าง Script...", "info");
+
     const script = await buildLuaScript(currentKey);
+
+    if (!script || script.trim().length < 20) {
+      showToast("message.txt ว่างหรือโหลดไม่ได้", "error");
+      return;
+    }
+
     await copyToClipboard(script);
   } catch (err) {
     console.error("copy script error:", err);
-    showToast("โหลด message.txt ไม่สำเร็จ", "error");
+    showToast("Copy Script ไม่สำเร็จ ดู Console", "error");
   }
 });
 
