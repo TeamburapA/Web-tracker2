@@ -34,7 +34,6 @@ export async function getToken() {
 
   return session?.access_token || null;
 }
-
 /** Logout แล้ว redirect ไป login */
 export async function logout() {
   const sb = await getSupabase();

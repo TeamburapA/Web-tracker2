@@ -258,6 +258,16 @@ async function deleteAccount(robloxUserId, displayName) {
 // ── Load /api/me ──────────────────────────────────────────────────────────────
 async function loadMe() {
   const token = await ensureToken();
+  const res = await fetch("/api/me", {
+  headers: { Authorization: `Bearer ${token}` },
+  cache: "no-store",
+});
+
+if (res.status === 401) {
+  authToken = null;
+  window.location.href = "/login.html";
+  return;
+}
   if (!token) return;
 
   try {
