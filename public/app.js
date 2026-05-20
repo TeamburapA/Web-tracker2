@@ -24,17 +24,21 @@ let players = [];
 let serverNow = Date.now();
 let authToken = null;
 let currentKey = null;
-
+let playersTimer = null;
+let meTimer = null;
 // ── Auth token ────────────────────────────────────────────────────────────────
 async function ensureToken() {
   if (!authToken) authToken = await getToken();
 
   if (!authToken) {
-    window.location.href = "/login.html";
+    window.location.replace("/login.html");
     return null;
   }
 
   return authToken;
+}
+function authHeaders() {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
 }
 // ── Lua script template from public/message.txt ───────────────────────────────
 async function buildLuaScript(scriptKey) {
@@ -69,6 +73,16 @@ async function buildLuaScript(scriptKey) {
 // ── Formatting ────────────────────────────────────────────────────────────────
 function formatNumber(v) {
   return Number(v || 0).toLocaleString("en-US");
+}
+function stopPollingAndLogin() {
+  if (playersTimer) clearInterval(playersTimer);
+  if (meTimer) clearInterval(meTimer);
+
+  playersTimer = null;
+  meTimer = null;
+  authToken = null;
+
+  window.location.replace("/login.html");
 }
 
 function timeAgo(ts) {
@@ -258,37 +272,40 @@ async function deleteAccount(robloxUserId, displayName) {
 // ── Load /api/me ──────────────────────────────────────────────────────────────
 async function loadMe() {
   const token = await ensureToken();
-  const res = await fetch("/api/me", {
-  headers: { Authorization: `Bearer ${token}` },
-  cache: "no-store",
-});
-
-if (res.status === 401) {
-  authToken = null;
-  window.location.href = "/login.html";
-  return;
-}
   if (!token) return;
 
   try {
-    const res = await fetch("/api/me", { headers: authHeaders(), cache: "no-store" });
-    if (!res.ok) return;
+    const res = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    if (res.status === 401) {
+      stopPollingAndLogin();
+      return;
+    }
+
+    if (!res.ok) {
+      if (scriptKeyEl) scriptKeyEl.textContent = "โหลด Script Key ไม่สำเร็จ";
+      return;
+    }
 
     const { user } = await res.json();
 
     if (userEmailEl) userEmailEl.textContent = user.email || "";
 
-    if (scriptKeyEl && user.script_key) {
-      scriptKeyEl.textContent = user.script_key;
-      currentKey = user.script_key;
+    if (scriptKeyEl) {
+      scriptKeyEl.textContent = user.script_key || "ยังไม่มี Script Key";
     }
 
-    const accounts = user.roblox_accounts || [];
+    currentKey = user.script_key || null;
 
+    const accounts = user.roblox_accounts || [];
     if (accountsCountEl) accountsCountEl.textContent = accounts.length;
     renderAccounts(accounts);
   } catch (err) {
     console.warn("loadMe error:", err);
+    if (scriptKeyEl) scriptKeyEl.textContent = "โหลด Script Key ไม่สำเร็จ";
   }
 }
 
@@ -303,8 +320,20 @@ async function loadPlayers() {
   }
 
   try {
-    const res = await fetch("/api/players", { headers: authHeaders(), cache: "no-store" });
-    if (!res.ok) return;
+    const res = await fetch("/api/players", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    if (res.status === 401) {
+      stopPollingAndLogin();
+      return;
+    }
+
+    if (!res.ok) {
+      rowsEl.innerHTML = `<tr><td colspan="9" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
+      return;
+    }
 
     const data = await res.json();
     players = data.players || [];
@@ -320,7 +349,16 @@ async function loadPlayers() {
     }
   }
 }
+scriptKeyCopyBtn?.addEventListener("click", () => {
+  const key = scriptKeyEl?.textContent?.trim();
 
+  if (!key || key.includes("กำลัง") || key.includes("ไม่มี") || key.includes("ไม่สำเร็จ")) {
+    showToast("ยังไม่มี Script Key ให้คัดลอก", "warn");
+    return;
+  }
+
+  copyToClipboard(key);
+});
 // ── Script key copy ───────────────────────────────────────────────────────────
 copyAllBtn?.addEventListener("click", async () => {
   if (!currentKey) {
@@ -383,6 +421,6 @@ sortSelect?.addEventListener("change", render);
   await loadMe();
   await loadPlayers();
 
-  setInterval(loadPlayers, 5000);
-  setInterval(loadMe, 30000);
+playersTimer = setInterval(loadPlayers, 5000);
+meTimer = setInterval(loadMe, 30000);
 })();
