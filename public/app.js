@@ -101,6 +101,10 @@ function isOnline(p) {
   return serverNow - Number(p.updatedAt || 0) < 30000;
 }
 
+function cinemaCount(u = {}) {
+  return Number(u.Cinema || u.Cenima || u.TITAN || 0);
+}
+
 function escapeHtml(v) {
   return String(v)
     .replaceAll("&", "&amp;")
@@ -119,7 +123,7 @@ function sortedPlayers(list) {
     if (sort === "utc") return (b.units?.UTC || 0) - (a.units?.UTC || 0);
     if (sort === "uts") return (b.units?.UTS || 0) - (a.units?.UTS || 0);
     if (sort === "cinema") {
-      return (b.units?.Cinema || b.units?.Cenima || 0) - (a.units?.Cinema || a.units?.Cenima || 0);
+      return cinemaCount(b.units) - cinemaCount(a.units);
     }
 
     return (b.updatedAt || 0) - (a.updatedAt || 0);
@@ -178,7 +182,7 @@ function render() {
   const totalCoins = players.reduce((s, p) => s + Number(p.coins || 0), 0);
   const totalUnits = players.reduce((s, p) => {
     const u = p.units || {};
-    return s + Number(u.UTC || 0) + Number(u.UTS || 0) + Number(u.TITAN || 0) + Number(u.Cinema || u.Cenima || 0);
+    return s + Number(u.UTC || 0) + Number(u.UTS || 0) + cinemaCount(u);
   }, 0);
 
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
@@ -186,13 +190,12 @@ function render() {
   if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
 
   if (!filtered.length) {
-    rowsEl.innerHTML = `<tr><td colspan="9" class="empty">ยังไม่มีข้อมูล — รัน script ใน Roblox ก่อนนะ</td></tr>`;
+    rowsEl.innerHTML = `<tr><td colspan="8" class="empty">ยังไม่มีข้อมูล — รัน script ใน Roblox ก่อนนะ</td></tr>`;
     return;
   }
 
   rowsEl.innerHTML = filtered.map((p) => {
     const u = p.units || {};
-    const cinemaVal = u.Cinema || u.Cenima || 0;
     const offCls = isOnline(p) ? "" : " offline";
 
     return `
@@ -204,8 +207,7 @@ function render() {
         <td class="num">${formatNumber(p.coins)}</td>
         <td class="num utc">${formatNumber(u.UTC)}</td>
         <td class="num uts">${formatNumber(u.UTS)}</td>
-        <td class="num titan">${formatNumber(u.TITAN)}</td>
-        <td class="num cenima">${formatNumber(cinemaVal)}</td>
+        <td class="num cenima">${formatNumber(cinemaCount(u))}</td>
         <td><span class="pill${offCls}"><span class="dot"></span>${escapeHtml(p.status || "Online")}</span></td>
         <td class="${offCls.trim()}">${timeAgo(p.updatedAt || 0)}</td>
         <td><button class="btn-copy btn-copy-row" data-copy="${escapeHtml(String(p.userId || p.id || ""))}">Copy</button></td>
@@ -332,7 +334,7 @@ async function loadPlayers() {
     }
 
     if (!res.ok) {
-      rowsEl.innerHTML = `<tr><td colspan="9" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
+      rowsEl.innerHTML = `<tr><td colspan="8" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
       return;
     }
 
@@ -342,7 +344,7 @@ async function loadPlayers() {
 
     render();
   } catch {
-    rowsEl.innerHTML = `<tr><td colspan="9" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
+    rowsEl.innerHTML = `<tr><td colspan="8" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
   } finally {
     if (refreshBtn) {
       refreshBtn.classList.remove("spinning");
