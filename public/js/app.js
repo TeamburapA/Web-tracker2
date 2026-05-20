@@ -19,6 +19,7 @@ const accountsCountEl = document.getElementById("accountsCount");
 const userEmailEl = document.getElementById("userEmail");
 const refreshBtn = document.getElementById("refreshBtn");
 const logoutBtn = document.getElementById("logoutBtn");
+const tableCountLabel = document.getElementById("tableCountLabel");
 
 let players = [];
 let serverNow = Date.now();
@@ -190,6 +191,11 @@ function render() {
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
   if (totalCoinsEl) totalCoinsEl.textContent = formatNumber(totalCoins);
   if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
+  if (tableCountLabel) {
+    tableCountLabel.textContent = filtered.length
+      ? `Showing ${formatNumber(filtered.length)} of ${formatNumber(players.length)} accounts`
+      : "Live roster standby";
+  }
 
   if (!filtered.length) {
     rowsEl.innerHTML = `<tr><td colspan="8" class="empty">ยังไม่มีข้อมูล — รัน script ใน Roblox ก่อนนะ</td></tr>`;
@@ -199,6 +205,7 @@ function render() {
   rowsEl.innerHTML = filtered.map((p) => {
     const u = p.units || {};
     const offCls = isOnline(p) ? "" : " offline";
+    const cinemaValue = cinemaCount(u);
 
     return `
       <tr>
@@ -214,7 +221,7 @@ function render() {
         <td><span class="num coin-num">${formatNumber(p.coins)}</span></td>
         <td><span class="num utc">${formatNumber(u.UTC)}</span></td>
         <td><span class="num uts">${formatNumber(u.UTS)}</span></td>
-        <td><span class="cenima">Lobby_${formatNumber(cinemaCount(u))}</span></td>
+        <td><span class="cenima">${cinemaValue ? `Lobby_${formatNumber(cinemaValue)}` : "None"}</span></td>
         <td><span class="pill${offCls}"><span class="dot"></span>${escapeHtml(p.status || (isOnline(p) ? "Active" : "Offline"))}</span></td>
         <td class="${offCls.trim()}">${timeAgo(p.updatedAt || 0)}</td>
         <td><button class="btn-copy btn-copy-row" data-copy="${escapeHtml(String(p.userId || p.id || ""))}">Copy</button></td>

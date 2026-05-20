@@ -5,15 +5,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard | By.Chick Chick</title>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="/css/theme.css" />
   <link rel="stylesheet" href="/css/dashboard.css" />
 </head>
 
 <body class="dash-body">
+  <div class="dash-backdrop" aria-hidden="true"></div>
+
   <header class="dash-header">
     <div class="dash-header-left">
-      <span class="dash-brand">By.Chick Chick</span>
+      <span class="dash-brand"><span>CC</span>By.Chick Chick</span>
       <div class="dash-header-stats">
         <div class="dash-stat">
           <label>Online</label>
@@ -54,6 +57,7 @@
   <main class="app">
     <section class="hero-panel" id="keys">
       <div class="hero-copy">
+        <div class="section-kicker"><span></span>Command Console</div>
         <h1>Active Script Key</h1>
         <p>Universal Execution Authorization</p>
       </div>
@@ -129,7 +133,7 @@
       </div>
 
       <footer class="table-footer">
-        <span>Showing 1-10 of 42 accounts</span>
+        <span id="tableCountLabel">Live roster standby</span>
         <div class="pager" aria-hidden="true">
           <button>Previous</button>
           <button class="active">1</button>
