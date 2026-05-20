@@ -28,13 +28,14 @@ let currentKey = null;
 // ── Auth token ────────────────────────────────────────────────────────────────
 async function ensureToken() {
   if (!authToken) authToken = await getToken();
+
+  if (!authToken) {
+    window.location.href = "/login.html";
+    return null;
+  }
+
   return authToken;
 }
-
-function authHeaders() {
-  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
-}
-
 // ── Lua script template from public/message.txt ───────────────────────────────
 async function buildLuaScript(scriptKey) {
   const res = await fetch("/message.txt", { cache: "no-store" });

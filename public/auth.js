@@ -22,7 +22,16 @@ async function getSupabase() {
 /** ดึง access token ของ session ปัจจุบัน (ใช้กับ Authorization: Bearer) */
 export async function getToken() {
   const sb = await getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
+
+  let {
+    data: { session },
+  } = await sb.auth.getSession();
+
+  if (!session?.access_token) {
+    const refreshed = await sb.auth.refreshSession();
+    session = refreshed.data.session;
+  }
+
   return session?.access_token || null;
 }
 
