@@ -1,0 +1,57 @@
+/* Shared design tokens — By.Chick Chick */
+:root {
+  color-scheme: dark;
+
+  --bg: #050505;
+  --surface: #131313;
+  --panel: #0d0d0d;
+  --panel-2: #1c1b1b;
+  --panel-3: #201f1f;
+  --line: #1e1e1e;
+  --line-2: #272727;
+
+  --text: #e5e2e1;
+  --text-muted: #9a907b;
+  --text-dim: #777;
+
+  --primary: #f5c842;
+  --primary-dim: #eec13c;
+  --on-primary: #3d2e00;
+  --secondary: #d2bbff;
+  --secondary-dim: #6001d1;
+  --tertiary: #89ceff;
+
+  --gold: #f5c842;
+  --red: #f05252;
+  --green: #4ade80;
+  --purple: #9b8cfa;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+
+  --margin: 32px;
+  --gutter: 24px;
+  --font: "Geist", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  vertical-align: middle;
+  user-select: none;
+}

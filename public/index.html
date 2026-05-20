@@ -1,62 +1,60 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" class="dark">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>By.Chick Chick Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css" />
+  <title>Dashboard | By.Chick Chick</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="/css/dashboard.css" />
 </head>
 
-<body>
+<body class="dash-body">
+  <header class="dash-header">
+    <div class="dash-header-left">
+      <span class="dash-brand">By.Chick Chick</span>
+      <div class="dash-header-stats">
+        <div class="dash-stat">
+          <label>Online</label>
+          <span id="onlineCount">0</span>
+        </div>
+        <div class="dash-stat-divider"></div>
+        <div class="dash-stat">
+          <label>Total Coins</label>
+          <span id="totalCoins">0</span>
+        </div>
+        <div class="dash-stat-divider"></div>
+        <div class="dash-stat">
+          <label>Total Units</label>
+          <span id="totalUnits">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="dash-header-right user-info">
+      <span id="userEmail" class="user-email"></span>
+      <button type="button" id="logoutBtn" class="btn-logout" title="ออกจากระบบ">Logout</button>
+    </div>
+  </header>
+
   <main class="app">
-
-    <!-- ── Top bar ─────────────────────────────────────────── -->
-    <section class="topbar">
-      <div class="topbar-left">
-        <h1>By.Chick Chick</h1>
-        <p class="topbar-sub">Dashboard</p>
-      </div>
-      <div class="topbar-right">
-        <div class="summary">
-          <div>
-            <span id="onlineCount">0</span>
-            <label>Online</label>
-          </div>
-          <div>
-            <span id="totalCoins">0</span>
-            <label>Coins</label>
-          </div>
-          <div>
-            <span id="totalUnits">0</span>
-            <label>Units</label>
-          </div>
-        </div>
-        <div class="user-info">
-          <span id="userEmail" class="user-email"></span>
-          <button id="logoutBtn" class="btn-logout" title="ออกจากระบบ">🚪 ออก</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Script Key Panel ────────────────────────────────── -->
-    <section class="key-panel">
+    <section class="key-panel glass-card glow-border-purple">
       <div class="key-panel-left">
         <div class="key-label">
-          🔑 Script Key ของคุณ
+          Script Key ของคุณ
           <span class="key-hint">— นำไปวางใน Roblox script</span>
         </div>
         <div class="key-display">
           <code id="scriptKeyValue">กำลังโหลด...</code>
-          <button id="scriptKeyCopyBtn" class="btn-key-copy">📋 Copy</button>
+          <button type="button" id="scriptKeyCopyBtn" class="btn-key-copy">
+            <span class="material-symbols-outlined" style="font-size:16px">content_copy</span>
+            Copy
+          </button>
         </div>
       </div>
       <div class="key-panel-right">
         <div class="accounts-header">
-          🎮 Roblox Accounts ที่ตรวจพบ
+          Roblox Accounts
           <span class="accounts-badge" id="accountsCount">0</span>
         </div>
         <div id="accountsList" class="accounts-list">
@@ -65,53 +63,52 @@
       </div>
     </section>
 
-    <!-- ── Filters + Copy Script ───────────────────────────── -->
-    <section class="filters">
-      <input id="searchInput" type="search" placeholder="ค้นหา ID หรือชื่อ" />
-      <select id="sortSelect">
-        <option value="updated">อัปเดตล่าสุด</option>
-        <option value="coins">Coins มากสุด</option>
-        <option value="utc">UTC มากสุด</option>
-        <option value="uts">UTS มากสุด</option>
-        <option value="cinema">CINEMA มากสุด</option>
-      </select>
-      <button type="button" id="copyAllBtn" class="btn-copy" title="คัดลอก Roblox script">
-        📜 Copy Script
-      </button>
-      <button type="button" id="refreshBtn" class="btn-refresh" title="รีเฟรชข้อมูล">
-        <span class="refresh-icon">↻</span>
-      </button>
-    </section>
+    <section class="table-section glass-card">
+      <div class="filters">
+        <input id="searchInput" type="search" placeholder="ค้นหา ID หรือชื่อ" />
+        <select id="sortSelect">
+          <option value="updated">อัปเดตล่าสุด</option>
+          <option value="coins">Coins มากสุด</option>
+          <option value="utc">UTC มากสุด</option>
+          <option value="uts">UTS มากสุด</option>
+          <option value="cinema">CINEMA มากสุด</option>
+        </select>
+        <button type="button" id="copyAllBtn" class="btn-copy" title="คัดลอก Roblox script">
+          <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle">terminal</span>
+          Copy Script
+        </button>
+        <button type="button" id="refreshBtn" class="btn-refresh" title="รีเฟรชข้อมูล">
+          <span class="refresh-icon material-symbols-outlined">refresh</span>
+        </button>
+      </div>
 
-    <!-- ── Players Table ──────────────────────────────────── -->
-    <section class="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th>Coins</th>
-            <th>UTC</th>
-            <th>UTS</th>
-            <th>CINEMA</th>
-            <th>Status</th>
-            <th>Last Update</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="playerRows">
-          <tr>
-            <td colspan="8" class="empty">กำลังโหลด...</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th>Coins</th>
+              <th>UTC</th>
+              <th>UTS</th>
+              <th>CINEMA</th>
+              <th>Status</th>
+              <th>Last Update</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="playerRows">
+            <tr>
+              <td colspan="8" class="empty">กำลังโหลด...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
-
   </main>
 
   <div id="copyToast" class="copy-toast" hidden>คัดลอกแล้ว</div>
 
-  <!-- auth.js guard + app.js logic (both modules) -->
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="/js/app.js"></script>
 </body>
 
 </html>
