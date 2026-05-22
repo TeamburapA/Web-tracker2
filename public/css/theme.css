@@ -1,39 +1,50 @@
-/* Shared design tokens — By.Chick Chick */
+/* Shared design tokens — By.Chick Chick  ·  Golden Premium Theme */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap");
+
 :root {
   color-scheme: dark;
 
-  --bg: #050505;
-  --surface: #131313;
-  --panel: #0d0d0d;
-  --panel-2: #1c1b1b;
-  --panel-3: #201f1f;
-  --line: #1e1e1e;
-  --line-2: #272727;
+  --bg: #08080a;
+  --surface: #111113;
+  --panel: #0f0f11;
+  --panel-2: #19191c;
+  --panel-3: #1f1f23;
+  --line: rgba(245, 200, 66, 0.10);
+  --line-2: rgba(245, 200, 66, 0.16);
 
-  --text: #e5e2e1;
-  --text-muted: #9a907b;
-  --text-dim: #777;
+  --text: #f0ece4;
+  --text-muted: #a89e82;
+  --text-dim: #6b6352;
 
   --primary: #f5c842;
-  --primary-dim: #eec13c;
-  --on-primary: #3d2e00;
-  --secondary: #d2bbff;
-  --secondary-dim: #6001d1;
-  --tertiary: #89ceff;
+  --primary-hover: #ffd95c;
+  --primary-dim: #c9a020;
+  --on-primary: #1a1400;
+  --secondary: #e8c547;
+  --secondary-dim: #b89a2a;
+  --tertiary: #ffe082;
 
   --gold: #f5c842;
+  --gold-light: #ffe082;
+  --gold-dark: #b89a2a;
   --red: #f05252;
   --green: #4ade80;
-  --purple: #9b8cfa;
+  --purple: #c4a8ff;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
 
   --margin: 32px;
   --gutter: 24px;
-  --font: "Geist", "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Geist Mono", monospace;
+  --font: "Outfit", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Shadows */
+  --shadow-gold: 0 0 40px rgba(245, 200, 66, 0.08);
+  --shadow-card: 0 24px 80px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 60px rgba(245, 200, 66, 0.12);
 }
 
 *,
@@ -48,6 +59,22 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 200, 66, 0.18);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 200, 66, 0.32);
 }
 
 .material-symbols-outlined {
