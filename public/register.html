@@ -4,31 +4,48 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register - By.Chick Chick</title>
+  <title>Register — By.Chick Chick</title>
+  <meta name="description" content="Create your By.Chick Chick account for real-time Roblox analytics." />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/theme.css" />
   <link rel="stylesheet" href="/css/auth.css" />
 </head>
 
 <body class="auth-page auth-page--register">
+
+  <!-- Decorative layers -->
   <div class="auth-bg-mesh" aria-hidden="true"></div>
   <div class="auth-bg-grid" aria-hidden="true"></div>
   <div class="auth-grid" aria-hidden="true"></div>
+  <div class="auth-noise" aria-hidden="true"></div>
+  <div class="auth-orb auth-orb--1" aria-hidden="true"></div>
+  <div class="auth-orb auth-orb--2" aria-hidden="true"></div>
 
   <main class="auth-wrap auth-wrap--register">
+
+    <!-- Brand -->
     <header class="auth-shell-brand auth-shell-brand--register">
-      <span class="brand-mark">CC</span>
+      <span class="brand-mark">
+        <span class="brand-mark-text">CC</span>
+        <span class="brand-mark-ring"></span>
+      </span>
       <div>
         <h1>By.Chick Chick</h1>
-        <p>Account Provisioning</p>
+        <p class="brand-tagline">Account Provisioning</p>
       </div>
     </header>
 
+    <!-- Register card -->
     <section class="auth-card auth-card--register" aria-label="Register">
+      <div class="auth-card-glow" aria-hidden="true"></div>
+
       <header class="auth-header">
-        <div class="chick-icon">CC</div>
-        <h1 class="auth-title">Register</h1>
-        <p class="auth-subtitle">Join the Elite Gaming Suite and access real-time statistical insights.</p>
+        <div class="chick-icon">
+          <span class="brand-mark-text">CC</span>
+          <span class="brand-mark-ring"></span>
+        </div>
+        <h1 class="auth-title">Create Account</h1>
+        <p class="auth-subtitle">Join the suite and get access to real-time analytics.</p>
       </header>
 
       <div id="authError" class="auth-alert auth-alert-error" hidden></div>
@@ -39,7 +56,7 @@
           <label for="regEmail">Email Address</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">mail</span>
-            <input id="regEmail" type="email" name="email" placeholder="commander@gaming.pro" autocomplete="email" required />
+            <input id="regEmail" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
           </div>
         </div>
 
@@ -47,7 +64,7 @@
           <label for="regPassword">Create Password</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">lock</span>
-            <input id="regPassword" type="password" name="password" placeholder="••••••••" autocomplete="new-password" required />
+            <input id="regPassword" type="password" name="password" placeholder="Min. 6 characters" autocomplete="new-password" required />
             <button type="button" class="toggle-pw" id="togglePwReg" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
@@ -58,7 +75,7 @@
           <label for="regConfirm">Confirm Password</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">shield_lock</span>
-            <input id="regConfirm" type="password" name="confirm" placeholder="••••••••" autocomplete="new-password" required />
+            <input id="regConfirm" type="password" name="confirm" placeholder="Repeat your password" autocomplete="new-password" required />
             <button type="button" class="toggle-pw" id="togglePwCfm" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
@@ -67,25 +84,26 @@
 
         <button type="submit" class="btn-primary" id="registerBtn">
           <span class="btn-text">Create Account</span>
-          <span class="material-symbols-outlined">rocket_launch</span>
+          <span class="material-symbols-outlined btn-icon">arrow_forward</span>
           <span class="btn-spinner" hidden></span>
         </button>
       </form>
 
       <p class="auth-footer">
-        Already part of the squad?
-        <a href="/login.html">Log in here</a>
+        Already have an account?
+        <a href="/login.html">Sign in</a>
       </p>
     </section>
 
+    <!-- Feature badges -->
     <div class="auth-features" aria-hidden="true">
       <span class="auth-feature"><span class="material-symbols-outlined">shield</span>Secure</span>
       <span class="auth-feature"><span class="material-symbols-outlined">query_stats</span>Analytics</span>
-      <span class="auth-feature"><span class="material-symbols-outlined">bolt</span>Fast Access</span>
+      <span class="auth-feature"><span class="material-symbols-outlined">bolt</span>Fast</span>
     </div>
   </main>
 
-  <div class="auth-status-pill"><span class="dot-online"></span>Global Servers: Online</div>
+  <div class="auth-status-pill"><span class="dot-online"></span>Systems Online</div>
 
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/ui.js"></script>

@@ -4,41 +4,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login - By.Chick Chick</title>
+  <title>Login — By.Chick Chick</title>
+  <meta name="description" content="Sign in to your By.Chick Chick dashboard for real-time Roblox analytics." />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/theme.css" />
   <link rel="stylesheet" href="/css/auth.css" />
 </head>
 
 <body class="auth-page auth-page--login">
+
+  <!-- Decorative layers -->
   <div class="auth-bg-mesh" aria-hidden="true"></div>
   <div class="auth-grid" aria-hidden="true"></div>
+  <div class="auth-noise" aria-hidden="true"></div>
+  <div class="auth-orb auth-orb--1" aria-hidden="true"></div>
+  <div class="auth-orb auth-orb--2" aria-hidden="true"></div>
 
   <main class="auth-wrap auth-wrap--login">
+
+    <!-- Brand -->
     <header class="auth-shell-brand">
-      <span class="brand-mark">CC</span>
+      <span class="brand-mark">
+        <span class="brand-mark-text">CC</span>
+        <span class="brand-mark-ring"></span>
+      </span>
       <div>
         <h1>By.Chick Chick</h1>
+        <p class="brand-tagline">Dashboard Suite</p>
       </div>
     </header>
 
+    <!-- Login card -->
     <section class="auth-card auth-card--login" aria-label="Login">
+      <div class="auth-card-glow" aria-hidden="true"></div>
+
       <div class="auth-card-topline">
         <span class="status-dot"></span>
-        Secure Access Gateway
+        Secure Access
       </div>
-      <h2 class="auth-title">Login</h2>
-      <p class="auth-subtitle">Welcome back.</p>
+
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-subtitle">Sign in to your account to continue.</p>
 
       <div id="authError" class="auth-alert auth-alert-error" hidden></div>
       <div id="authSuccess" class="auth-alert auth-alert-success" hidden></div>
 
       <form id="loginForm" class="auth-form" autocomplete="on" novalidate>
         <div class="field">
-          <label for="loginEmail">Email Address</label>
+          <label for="loginEmail">Email</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">mail</span>
-            <input id="loginEmail" type="email" name="email" placeholder="name@nexus.com" autocomplete="email" required />
+            <input id="loginEmail" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
           </div>
         </div>
 
@@ -46,7 +62,7 @@
           <label for="loginPassword">Password</label>
           <div class="input-wrap">
             <span class="material-symbols-outlined input-icon">lock</span>
-            <input id="loginPassword" type="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+            <input id="loginPassword" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required />
             <button type="button" class="toggle-pw" id="togglePw" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
@@ -54,22 +70,23 @@
         </div>
 
         <button type="submit" class="btn-primary" id="loginBtn">
-          <span class="btn-text">Login</span>
-          <span class="material-symbols-outlined">bolt</span>
+          <span class="btn-text">Sign In</span>
+          <span class="material-symbols-outlined btn-icon">arrow_forward</span>
           <span class="btn-spinner" hidden></span>
         </button>
       </form>
 
       <p class="auth-footer">
-        New to the suite?
-        <a href="/register.html">Create an account</a>
+        Don't have an account?
+        <a href="/register.html">Create one</a>
       </p>
     </section>
 
+    <!-- Bottom badges -->
     <div class="auth-mini-stats" aria-hidden="true">
-      <span>Encrypted</span>
-      <span>Live Ops</span>
-      <span>Low Latency</span>
+      <span><span class="material-symbols-outlined">encrypted</span>Encrypted</span>
+      <span><span class="material-symbols-outlined">speed</span>Real-time</span>
+      <span><span class="material-symbols-outlined">verified_user</span>Secure</span>
     </div>
   </main>
 

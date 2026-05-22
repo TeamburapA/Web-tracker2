@@ -4,7 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard | By.Chick Chick</title>
+  <title>Dashboard — By.Chick Chick</title>
+  <meta name="description" content="By.Chick Chick real-time Roblox dashboard with player stats, coins, and analytics." />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="/css/theme.css" />
@@ -13,10 +14,16 @@
 
 <body class="dash-body">
   <div class="dash-backdrop" aria-hidden="true"></div>
+  <div class="dash-noise" aria-hidden="true"></div>
 
+  <!-- ═══════════════ HEADER ═══════════════ -->
   <header class="dash-header">
     <div class="dash-header-left">
-      <span class="dash-brand"><span>CC</span>By.Chick Chick</span>
+      <span class="dash-brand">
+        <span class="dash-brand-icon"><span>CC</span></span>
+        <span class="dash-brand-text">By.Chick Chick</span>
+      </span>
+
       <div class="dash-header-stats">
         <div class="dash-stat">
           <label>Online</label>
@@ -36,11 +43,15 @@
     </div>
 
     <nav class="dash-tabs" aria-label="Dashboard sections">
-      <a class="dash-tab active" href="/">Stats</a>
+      <a class="dash-tab active" href="/">
+        <span class="material-symbols-outlined">monitoring</span>
+        Stats
+      </a>
     </nav>
 
     <div class="dash-header-right user-info">
       <button type="button" id="copyAllBtn" class="btn-copy btn-copy--top">
+        <span class="material-symbols-outlined">content_copy</span>
         Copy Key
       </button>
       <button class="icon-btn" type="button" aria-label="Notifications">
@@ -48,20 +59,31 @@
       </button>
       <span class="user-avatar" aria-hidden="true">🐥</span>
       <span id="userEmail" class="user-email"></span>
-      <button type="button" id="logoutBtn" class="btn-logout" title="Logout">Logout</button>
+      <button type="button" id="logoutBtn" class="btn-logout" title="Logout">
+        <span class="material-symbols-outlined">logout</span>
+      </button>
     </div>
   </header>
 
+  <!-- ═══════════════ MAIN ═══════════════ -->
   <main class="app">
+
+    <!-- Hero -->
     <section class="hero-panel" id="script-key">
       <div class="hero-copy">
+        <div class="hero-kicker">
+          <span class="hero-kicker-line"></span>
+          Script Key
+        </div>
         <h1>Active Script Key</h1>
       </div>
       <span class="hero-key-mark material-symbols-outlined" aria-hidden="true">vpn_key</span>
     </section>
 
+    <!-- Key display -->
     <section class="key-panel">
       <div class="key-display">
+        <div class="key-display-glow" aria-hidden="true"></div>
         <code id="scriptKeyValue">Loading...</code>
         <button type="button" id="scriptKeyCopyBtn" class="btn-key-copy">
           <span class="material-symbols-outlined">content_copy</span>
@@ -70,8 +92,12 @@
       </div>
     </section>
 
+    <!-- Linked accounts -->
     <section class="accounts-panel">
-      <div class="accounts-header">Linked Roblox Accounts</div>
+      <div class="accounts-header">
+        <span class="material-symbols-outlined">group</span>
+        Linked Roblox Accounts
+      </div>
       <div class="accounts-row">
         <div id="accountsList" class="accounts-list">
           <span class="account-empty">No linked Roblox accounts yet</span>
@@ -80,28 +106,32 @@
       <span id="accountsCount" class="accounts-count-sr">0</span>
     </section>
 
+    <!-- Data table -->
     <section class="table-section glass-card">
       <div class="filters">
         <label class="search-box" for="searchInput">
           <span class="material-symbols-outlined">search</span>
-          <input id="searchInput" type="search" placeholder="Search accounts or IDs..." />
+          <input id="searchInput" type="search" placeholder="Search accounts or IDs…" />
         </label>
-        <label class="sort-label" for="sortSelect">Sort by:</label>
-        <select id="sortSelect">
-          <option value="coins">Coins (High)</option>
-          <option value="updated">Last Update</option>
-          <option value="utc">UTC (High)</option>
-          <option value="uts">UTS (High)</option>
-          <option value="cinema">Cinema (High)</option>
-        </select>
-        <button type="button" id="copyScriptBtnMirror" class="btn-copy btn-copy--table">
-          <span class="material-symbols-outlined">terminal</span>
-          Copy Script
-        </button>
-        <button type="button" id="refreshBtn" class="btn-refresh" title="Refresh">
-          <span class="refresh-icon material-symbols-outlined">refresh</span>
-          Refresh
-        </button>
+
+        <div class="filters-right">
+          <label class="sort-label" for="sortSelect">Sort:</label>
+          <select id="sortSelect">
+            <option value="coins">Coins (High)</option>
+            <option value="updated">Last Update</option>
+            <option value="utc">UTC (High)</option>
+            <option value="uts">UTS (High)</option>
+            <option value="cinema">Cinema (High)</option>
+          </select>
+          <button type="button" id="copyScriptBtnMirror" class="btn-copy btn-copy--table">
+            <span class="material-symbols-outlined">terminal</span>
+            Copy Script
+          </button>
+          <button type="button" id="refreshBtn" class="btn-refresh" title="Refresh data">
+            <span class="refresh-icon material-symbols-outlined">refresh</span>
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div class="tableWrap">
