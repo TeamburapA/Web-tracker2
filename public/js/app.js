@@ -1,9 +1,16 @@
 /**
- * app.js — Dashboard frontend (ES Module)
+ * app.js — Redesigned Dashboard controller (ES Module)
  */
 import { getToken, logout, initGuard, clearSession } from "./auth.js";
 
-// ── DOM refs ──────────────────────────────────────────────────────────────────
+const KNOWN_MAPS = {
+  "93712201161812": "LEGACY | Lobby",
+  "13775256536": "[LEGACY] Toilet Tower Defense",
+  "unknown": "Unknown Place"
+};
+
+
+// ── DOM References ────────────────────────────────────────────────────────────
 const rowsEl = document.getElementById("playerRows");
 const searchInput = document.getElementById("searchInput");
 const sortSelect = document.getElementById("sortSelect");
@@ -16,18 +23,27 @@ const scriptKeyEl = document.getElementById("scriptKeyValue");
 const scriptKeyCopyBtn = document.getElementById("scriptKeyCopyBtn");
 const accountsListEl = document.getElementById("accountsList");
 const accountsCountEl = document.getElementById("accountsCount");
+const linkedAccountsCountBadge = document.getElementById("linkedAccountsCountBadge");
 const userEmailEl = document.getElementById("userEmail");
+const userAvatarInitialsEl = document.getElementById("userAvatarInitials");
 const refreshBtn = document.getElementById("refreshBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const tableCountLabel = document.getElementById("tableCountLabel");
+const mapTabsListEl = document.getElementById("mapTabsList");
 
+// ── State Variables ───────────────────────────────────────────────────────────
 let players = [];
 let serverNow = Date.now();
 let authToken = null;
 let currentKey = null;
 let playersTimer = null;
 let meTimer = null;
-// ── Auth token ────────────────────────────────────────────────────────────────
+let currentMapFilter = null; // Stores selected map name, null represents "All Maps"
+
+// Roblox Headshot Cache
+const avatarCache = {};
+
+// ── Auth Token Helpers ─────────────────────────────────────────────────────────
 async function ensureToken() {
   if (!authToken) authToken = await getToken();
 
@@ -38,15 +54,57 @@ async function ensureToken() {
 
   return authToken;
 }
+
 function authHeaders() {
   return authToken ? { Authorization: `Bearer ${authToken}` } : {};
 }
-// ── Lua script template from public/message.txt ───────────────────────────────
+
+// ── Roblox Avatar Fetcher (Capped & Batch-processed) ───────────────────────────
+async function fetchAvatars(userIds) {
+  // Filter out invalid, duplicate, or already-cached IDs
+  const toFetch = [...new Set(userIds)]
+    .map(id => String(id).trim())
+    .filter(id => id && !avatarCache[id] && !isNaN(parseInt(id, 10)) && parseInt(id, 10) > 0);
+
+  if (toFetch.length === 0) return;
+
+  // Mark items as loading to prevent duplicate requests
+  toFetch.forEach(id => {
+    avatarCache[id] = "loading";
+  });
+
+  try {
+    const res = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${toFetch.join(",")}&size=48x48&format=Png&isCircular=true`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.data) {
+        data.data.forEach(item => {
+          if (item.state === "Completed" && item.imageUrl) {
+            avatarCache[item.targetId] = item.imageUrl;
+          } else {
+            avatarCache[item.targetId] = null; // Fallback
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to fetch Roblox avatar headshots:", err);
+  } finally {
+    // Clear loading placeholders for any failed requests
+    toFetch.forEach(id => {
+      if (avatarCache[id] === "loading") {
+        avatarCache[id] = null;
+      }
+    });
+  }
+}
+
+// ── Lua Script Generator (From server's message.txt) ─────────────────────────
 async function buildLuaScript(scriptKey) {
   const res = await fetch("/message.txt", { cache: "no-store" });
 
   if (!res.ok) {
-    throw new Error(`โหลด message.txt ไม่สำเร็จ: ${res.status}`);
+    throw new Error(`โหลดไฟล์ message.txt ไม่สำเร็จ: ${res.status}`);
   }
 
   let script = await res.text();
@@ -71,10 +129,11 @@ async function buildLuaScript(scriptKey) {
   return script;
 }
 
-// ── Formatting ────────────────────────────────────────────────────────────────
+// ── Utility Formatting Functions ──────────────────────────────────────────────
 function formatNumber(v) {
   return Number(v || 0).toLocaleString("en-US");
 }
+
 async function stopPollingAndLogin() {
   if (playersTimer) clearInterval(playersTimer);
   if (meTimer) clearInterval(meTimer);
@@ -117,7 +176,7 @@ function escapeHtml(v) {
     .replaceAll("'", "&#039;");
 }
 
-// ── Sort ──────────────────────────────────────────────────────────────────────
+// ── Sorting Logic ─────────────────────────────────────────────────────────────
 function sortedPlayers(list) {
   const sort = sortSelect?.value || "updated";
 
@@ -133,7 +192,7 @@ function sortedPlayers(list) {
   });
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
+// ── Toast Notifications ───────────────────────────────────────────────────────
 let toastTimer;
 
 function showToast(msg, type = "info") {
@@ -141,11 +200,11 @@ function showToast(msg, type = "info") {
 
   copyToast.textContent = msg;
   copyToast.className = `copy-toast toast-${type}`;
-  copyToast.hidden = false;
+  copyToast.style.display = "flex";
 
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
-    copyToast.hidden = true;
+    copyToast.style.display = "none";
   }, 2000);
 }
 
@@ -157,7 +216,7 @@ async function copyToClipboard(text) {
 
   try {
     await navigator.clipboard.writeText(text);
-    showToast("คัดลอกแล้ว ✓", "ok");
+    showToast("คัดลอกสำเร็จ ✓", "ok");
     return true;
   } catch {
     const ta = Object.assign(document.createElement("textarea"), { value: text });
@@ -168,17 +227,65 @@ async function copyToClipboard(text) {
     const ok = document.execCommand("copy");
     document.body.removeChild(ta);
 
-    showToast(ok ? "คัดลอกแล้ว ✓" : "คัดลอกไม่สำเร็จ", ok ? "ok" : "error");
+    showToast(ok ? "คัดลอกสำเร็จ ✓" : "คัดลอกไม่สำเร็จ", ok ? "ok" : "error");
     return ok;
   }
 }
 
-// ── Render dashboard table ────────────────────────────────────────────────────
+// ── Render Map Tabs (Sidebar) ────────────────────────────────────────────────
+function renderMapTabs() {
+  if (!mapTabsListEl) return;
+
+  // Group players by map (placeName fallback to placeId)
+  const mapCounts = {};
+  players.forEach(p => {
+    const rawMapName = p.placeName || p.placeId || "Unknown Map";
+    const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
+    mapCounts[mapName] = (mapCounts[mapName] || 0) + 1;
+  });
+
+  const allMapsCountEl = document.getElementById("allMapsCount");
+  if (allMapsCountEl) allMapsCountEl.textContent = players.length;
+
+  // Update "All Maps" active style
+  const allBtn = mapTabsListEl.querySelector('[data-map="all"]');
+  if (allBtn) {
+    if (!currentMapFilter) {
+      allBtn.classList.add("active");
+    } else {
+      allBtn.classList.remove("active");
+    }
+  }
+
+  // Clear dynamic maps tabs
+  const dynamicBtns = mapTabsListEl.querySelectorAll('.map-tab-btn:not([data-map="all"])');
+  dynamicBtns.forEach(btn => btn.remove());
+
+  // Render maps tabs
+  const html = Object.entries(mapCounts).map(([mapName, count]) => {
+    const activeClass = currentMapFilter === mapName ? 'active' : '';
+    return `
+      <button class="map-tab-btn ${activeClass}" data-map="${escapeHtml(mapName)}">
+        <span>${escapeHtml(mapName)}</span>
+        <span class="map-tab-count">${count}</span>
+      </button>
+    `;
+  }).join("");
+
+  mapTabsListEl.insertAdjacentHTML('beforeend', html);
+}
+
+// ── Render Main Roster Table ──────────────────────────────────────────────────
 function render() {
   const query = searchInput?.value.trim().toLowerCase() || "";
 
+  // Filter players by Search query AND selected Sidebar Map Filter
   const filtered = sortedPlayers(players).filter((p) => {
-    return `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
+    const matchesSearch = `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
+    const rawMapName = p.placeName || p.placeId || "Unknown Map";
+    const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
+    const matchesMap = !currentMapFilter || mapName === currentMapFilter;
+    return matchesSearch && matchesMap;
   });
 
   const online = players.filter(isOnline).length;
@@ -188,79 +295,144 @@ function render() {
     return s + Number(u.UTC || 0) + Number(u.UTS || 0) + cinemaCount(u);
   }, 0);
 
+  // Update Counters
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
   if (totalCoinsEl) totalCoinsEl.textContent = formatNumber(totalCoins);
   if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
   if (tableCountLabel) {
     tableCountLabel.textContent = filtered.length
-      ? `Showing ${formatNumber(filtered.length)} of ${formatNumber(players.length)} accounts`
-      : "Live roster standby";
+      ? `แสดงบัญชีที่คัดกรองอยู่ ${formatNumber(filtered.length)} จากทั้งหมด ${formatNumber(players.length)} บัญชี`
+      : "Roster standby — ยังไม่มีบัญชีรันระบบสคริปต์";
   }
 
   if (!filtered.length) {
-    rowsEl.innerHTML = `<tr><td colspan="8" class="empty">ยังไม่มีข้อมูล — รัน script ใน Roblox ก่อนนะ</td></tr>`;
+    rowsEl.innerHTML = `<tr><td colspan="8" class="empty-table-state">ยังไม่มีข้อมูลบัญชีในแผนที่นี้ — กรุณารัน Script ใน Roblox ก่อนนะ</td></tr>`;
     return;
   }
 
+  // Generate table rows HTML
   rowsEl.innerHTML = filtered.map((p) => {
     const u = p.units || {};
-    const offCls = isOnline(p) ? "" : " offline";
+    const isPOnline = isOnline(p);
+    const statusCls = isPOnline ? "online" : "offline";
+    const statusText = escapeHtml(p.status || (isPOnline ? "Active" : "Offline"));
     const cinemaValue = cinemaCount(u);
+    const avatarUrl = avatarCache[p.userId] || "";
 
     return `
       <tr>
         <td>
-          <div class="account">
-            <span class="account-avatar" aria-hidden="true"></span>
-            <div>
-              <strong>${escapeHtml(p.name || "Unknown")}</strong>
-              <span>ID: ${escapeHtml(String(p.userId || p.id || "-"))}</span>
+          <div class="td-player-profile">
+            <div class="player-avatar" data-avatar-id="${escapeHtml(p.userId)}">
+              ${avatarUrl && avatarUrl !== "loading" 
+                ? `<img src="${avatarUrl}" alt="${escapeHtml(p.name)}" />` 
+                : `<span class="badge-avatar-fallback">${escapeHtml((p.displayName || p.name || "?").substring(0, 1).toUpperCase())}</span>`}
+            </div>
+            <div class="player-info-meta">
+              <span class="player-name-main">${escapeHtml(p.displayName || p.name || "Unknown")}</span>
+              <span class="player-id-sub">@${escapeHtml(p.name)} | ID: ${escapeHtml(String(p.userId || p.id || "-"))}</span>
             </div>
           </div>
         </td>
-        <td><span class="num coin-num">${formatNumber(p.coins)}</span></td>
-        <td><span class="num utc">${formatNumber(u.UTC)}</span></td>
-        <td><span class="num uts">${formatNumber(u.UTS)}</span></td>
-        <td><span class="num cinema-num">${formatNumber(cinemaValue)}</span></td>
-        <td><span class="pill${offCls}"><span class="dot"></span>${escapeHtml(p.status || (isOnline(p) ? "Active" : "Offline"))}</span></td>
-        <td class="${offCls.trim()}">${timeAgo(p.updatedAt || 0)}</td>
-        <td><button class="btn-copy btn-copy-row" data-copy="${escapeHtml(String(p.userId || p.id || ""))}">Copy</button></td>
+        <td><span class="metric-number coin-metric">${formatNumber(p.coins)}</span></td>
+        <td><span class="metric-number utc-metric">${formatNumber(u.UTC)}</span></td>
+        <td><span class="metric-number uts-metric">${formatNumber(u.UTS)}</span></td>
+        <td><span class="metric-number cinema-metric">${formatNumber(cinemaValue)}</span></td>
+        <td>
+          <span class="status-pill ${statusCls}">
+            <span class="status-dot"></span>
+            ${statusText}
+          </span>
+        </td>
+        <td><span class="time-update ${!isPOnline ? 'offline' : ''}">${timeAgo(p.updatedAt || 0)}</span></td>
+        <td>
+          <button class="btn-copy-roster-id" data-copy="${escapeHtml(String(p.userId || p.id || ""))}"></button>
+        </td>
       </tr>`;
   }).join("");
+
+  // Fix button text contents securely (to keep it neat)
+  rowsEl.querySelectorAll(".btn-copy-roster-id").forEach(btn => {
+    btn.textContent = "Copy ID";
+  });
+
+  // Batch-fetch avatars in the background
+  const playerIds = filtered.map(p => p.userId).filter(Boolean);
+  fetchAvatars(playerIds).then(() => {
+    // Populate avatars dynamically on load
+    filtered.forEach(p => {
+      const cachedSrc = avatarCache[p.userId];
+      if (cachedSrc && cachedSrc !== "loading") {
+        const avatarDivs = rowsEl.querySelectorAll(`[data-avatar-id="${p.userId}"]`);
+        avatarDivs.forEach(div => {
+          if (!div.querySelector("img")) {
+            div.innerHTML = `<img src="${cachedSrc}" alt="${escapeHtml(p.name)}" />`;
+          }
+        });
+      }
+    });
+  });
 }
 
-// ── Render Roblox account badges ──────────────────────────────────────────────
+// ── Render Roblox Account Badges ──────────────────────────────────────────────
 function renderAccounts(accounts) {
   if (!accountsListEl) return;
 
   if (!accounts.length) {
-    accountsListEl.innerHTML = `<span class="account-empty">ยังไม่มี Roblox account — รัน script ก่อน</span>`;
+    accountsListEl.innerHTML = `<span class="accounts-empty-state">ยังไม่มี Roblox account เชื่อมโยง — รัน script ก่อนนะ</span>`;
+    if (linkedAccountsCountBadge) linkedAccountsCountBadge.textContent = "0";
     return;
   }
+
+  if (linkedAccountsCountBadge) linkedAccountsCountBadge.textContent = accounts.length;
 
   accountsListEl.innerHTML = accounts.map((a) => {
     const label = escapeHtml(a.display_name || a.roblox_username || a.roblox_user_id);
     const sub = escapeHtml(a.roblox_username || "");
     const lastSeen = a.last_seen_at ? new Date(a.last_seen_at).toLocaleString("th-TH") : "-";
+    const avatarUrl = avatarCache[a.roblox_user_id] || "";
 
     return `
-      <span class="account-badge" title="Last seen: ${lastSeen}">
-        <span class="badge-name">${label}</span>
-        ${sub && sub !== label ? `<span class="badge-sub">@${sub}</span>` : ""}
+      <div class="roblox-badge" title="Last seen: ${lastSeen}">
+        <div class="badge-avatar" data-badge-avatar-id="${escapeHtml(a.roblox_user_id)}">
+          ${avatarUrl && avatarUrl !== "loading" 
+            ? `<img src="${avatarUrl}" alt="${label}" />` 
+            : `<span class="badge-avatar-fallback">${escapeHtml(label.substring(0, 1).toUpperCase())}</span>`}
+        </div>
+        <div class="badge-info">
+          <span class="badge-display-name">${label}</span>
+          ${sub && sub !== label ? `<span class="badge-username">@${sub}</span>` : ""}
+        </div>
         <button
-          class="btn-unlink"
+          class="btn-unlink-roblox"
           data-roblox-id="${escapeHtml(a.roblox_user_id)}"
           data-roblox-name="${escapeHtml(a.roblox_username || a.roblox_user_id)}"
-          title="ยกเลิก account นี้"
+          title="ยกเลิกการเชื่อมต่อบัญชีนี้"
           aria-label="ยกเลิก ${label}"
         >×</button>
-      </span>`;
+      </div>`;
   }).join("");
+
+  // Batch fetch Roblox avatars for linked badges
+  const ids = accounts.map(a => a.roblox_user_id);
+  fetchAvatars(ids).then(() => {
+    accounts.forEach(a => {
+      const cachedSrc = avatarCache[a.roblox_user_id];
+      if (cachedSrc && cachedSrc !== "loading") {
+        const avatarDivs = accountsListEl.querySelectorAll(`[data-badge-avatar-id="${a.roblox_user_id}"]`);
+        avatarDivs.forEach(div => {
+          if (!div.querySelector("img")) {
+            div.innerHTML = `<img src="${cachedSrc}" alt="${escapeHtml(a.display_name || a.roblox_username)}" />`;
+          }
+        });
+      }
+    });
+  });
 }
 
-// ── Delete / unlink Roblox account ───────────────────────────────────────────
+// ── Unlink / Delete Roblox Account ────────────────────────────────────────────
 async function deleteAccount(robloxUserId, displayName) {
-  if (!confirm(`ยืนยันการยกเลิก "${displayName}"?\nบัญชีนี้จะถูกลบออกจาก dashboard`)) return;
+  if (!confirm(`ยืนยันการยกเลิกเชื่อมโยงบัญชี "${displayName}"?\nข้อมูลการออนไลน์ของบัญชีนี้จะถูกนำออกจากบอร์ดจนกว่าจะรันสคริปต์อีกครั้ง`)) return;
 
   const token = await ensureToken();
   if (!token) return;
@@ -274,19 +446,19 @@ async function deleteAccount(robloxUserId, displayName) {
     const data = await res.json();
 
     if (data.ok) {
-      showToast(`ลบ ${displayName} แล้ว`, "ok");
+      showToast(`ลบเชื่อมต่อ ${displayName} สำเร็จ`, "ok");
       await loadMe();
       await loadPlayers();
     } else {
       showToast(`ลบไม่สำเร็จ: ${data.error}`, "error");
     }
   } catch (err) {
-    showToast("เกิดข้อผิดพลาด", "error");
+    showToast("เกิดข้อผิดพลาดในการลบ", "error");
     console.error("deleteAccount error:", err);
   }
 }
 
-// ── Load /api/me ──────────────────────────────────────────────────────────────
+// ── Load User Account Info (/api/me) ──────────────────────────────────────────
 async function loadMe() {
   const token = await ensureToken();
   if (!token) return;
@@ -303,30 +475,38 @@ async function loadMe() {
     }
 
     if (!res.ok) {
-      if (scriptKeyEl) scriptKeyEl.textContent = "โหลด Script Key ไม่สำเร็จ";
+      if (scriptKeyEl) scriptKeyEl.textContent = "ดาวน์โหลดคีย์ล้มเหลว";
       return;
     }
 
     const { user } = await res.json();
 
+    // Update Email
     if (userEmailEl) userEmailEl.textContent = user.email || "";
+    
+    // Update initials icon
+    if (userAvatarInitialsEl && user.email) {
+      userAvatarInitialsEl.textContent = user.email.substring(0, 1).toUpperCase();
+    }
 
+    // Update Script Key
     if (scriptKeyEl) {
       scriptKeyEl.textContent = user.script_key || "ยังไม่มี Script Key";
     }
 
     currentKey = user.script_key || null;
 
+    // Render linked accounts list
     const accounts = user.roblox_accounts || [];
     if (accountsCountEl) accountsCountEl.textContent = accounts.length;
     renderAccounts(accounts);
   } catch (err) {
     console.warn("loadMe error:", err);
-    if (scriptKeyEl) scriptKeyEl.textContent = "โหลด Script Key ไม่สำเร็จ";
+    if (scriptKeyEl) scriptKeyEl.textContent = "ดาวน์โหลดคีย์ล้มเหลว";
   }
 }
 
-// ── Load /api/players ─────────────────────────────────────────────────────────
+// ── Load Roster Players (/api/players) ────────────────────────────────────────
 async function loadPlayers() {
   const token = await ensureToken();
   if (!token) return;
@@ -348,7 +528,7 @@ async function loadPlayers() {
     }
 
     if (!res.ok) {
-      rowsEl.innerHTML = `<tr><td colspan="8" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
+      rowsEl.innerHTML = `<tr><td colspan="8" class="empty-table-state">เกิดข้อผิดพลาดในการโหลดข้อมูลบอร์ด</td></tr>`;
       return;
     }
 
@@ -356,9 +536,11 @@ async function loadPlayers() {
     players = data.players || [];
     serverNow = data.now || Date.now();
 
+    renderMapTabs();
     render();
-  } catch {
-    rowsEl.innerHTML = `<tr><td colspan="8" class="empty">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
+  } catch (err) {
+    console.error("loadPlayers error:", err);
+    rowsEl.innerHTML = `<tr><td colspan="8" class="empty-table-state">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</td></tr>`;
   } finally {
     if (refreshBtn) {
       refreshBtn.classList.remove("spinning");
@@ -366,43 +548,45 @@ async function loadPlayers() {
     }
   }
 }
+
+// ── Bind Event Listeners ──────────────────────────────────────────────────────
 scriptKeyCopyBtn?.addEventListener("click", () => {
   const key = scriptKeyEl?.textContent?.trim();
 
-  if (!key || key.includes("กำลัง") || key.includes("ไม่มี") || key.includes("ไม่สำเร็จ")) {
-    showToast("ยังไม่มี Script Key ให้คัดลอก", "warn");
+  if (!key || key.includes("กำลัง") || key.includes("ไม่มี") || key.includes("ล้มเหลว")) {
+    showToast("ยังไม่มีคีย์ให้คัดลอกในขณะนี้", "warn");
     return;
   }
 
   copyToClipboard(key);
 });
-// ── Script key copy ───────────────────────────────────────────────────────────
+
 copyAllBtn?.addEventListener("click", async () => {
   if (!currentKey) {
-    showToast("ยังไม่มี Script Key กรุณารอโหลดหรือล็อกอินใหม่", "warn");
+    showToast("กรุณารอโหลด หรือเชื่อมโยงบัญชีเพื่อรับคีย์ก่อน", "warn");
     return;
   }
 
   try {
-    showToast("กำลังสร้าง Script...", "info");
+    showToast("กำลังคอมไพล์สคริปต์...", "info");
 
     const script = await buildLuaScript(currentKey);
 
     if (!script || script.trim().length < 20) {
-      showToast("message.txt ว่างหรือโหลดไม่ได้", "error");
+      showToast("ไฟล์สคริปต์ message.txt ว่างหรือบกพร่อง", "error");
       return;
     }
 
     await copyToClipboard(script);
   } catch (err) {
     console.error("copy script error:", err);
-    showToast("Copy Script ไม่สำเร็จ ดู Console", "error");
+    showToast("ไม่สามารถสร้างสคริปต์ได้ ดู Console log", "error");
   }
 });
 
-// ── Unlink buttons ────────────────────────────────────────────────────────────
+// Accounts Badges Unlinking
 accountsListEl?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".btn-unlink");
+  const btn = e.target.closest(".btn-unlink-roblox");
   if (!btn) return;
 
   const robloxId = btn.getAttribute("data-roblox-id");
@@ -411,28 +595,44 @@ accountsListEl?.addEventListener("click", (e) => {
   if (robloxId) deleteAccount(robloxId, robloxName || robloxId);
 });
 
-// ── Refresh button ────────────────────────────────────────────────────────────
-refreshBtn?.addEventListener("click", async () => {
-  await loadPlayers();
-  showToast("อัปเดตแล้ว ✓", "ok");
+// Map Tab Sidebar Click Delegation
+mapTabsListEl?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".map-tab-btn");
+  if (!btn) return;
+
+  const mapVal = btn.getAttribute("data-map");
+  if (mapVal === "all") {
+    currentMapFilter = null;
+  } else {
+    currentMapFilter = mapVal;
+  }
+
+  renderMapTabs();
+  render();
 });
 
-// ── Logout button ─────────────────────────────────────────────────────────────
+// Dashboard Refresh button
+refreshBtn?.addEventListener("click", async () => {
+  await loadPlayers();
+  showToast("รีเฟรชข้อมูลบอร์ดสำเร็จ ✓", "ok");
+});
+
+// Logout Button
 logoutBtn?.addEventListener("click", async () => {
   await logout();
 });
 
-// ── Row copy buttons ──────────────────────────────────────────────────────────
+// Row Copy Buttons delegation
 rowsEl?.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-copy]");
   if (btn) copyToClipboard(btn.getAttribute("data-copy") ?? "");
 });
 
-// ── Search / sort ─────────────────────────────────────────────────────────────
+// Live Search & Sorting listeners
 searchInput?.addEventListener("input", render);
 sortSelect?.addEventListener("change", render);
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Application Initializer ──────────────────────────────────────────────────
 (async () => {
   const ok = await initGuard();
   if (!ok) return;
@@ -441,6 +641,7 @@ sortSelect?.addEventListener("change", render);
   await loadMe();
   await loadPlayers();
 
+  // Establish Auto Polling intervals
   playersTimer = setInterval(loadPlayers, 5000);
   meTimer = setInterval(loadMe, 30000);
 })();

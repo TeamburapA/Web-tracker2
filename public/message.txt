@@ -49,6 +49,11 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
         return
     end
 
+    local placeName = "Unknown Map"
+    pcall(function()
+        placeName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+    end)
+
     local body = HttpService:JSONEncode({
         key = cfg.Key,
         userId = player.UserId,
@@ -57,6 +62,7 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
         coins = getCoins(),
         status = statusText or "Online",
         placeId = game.PlaceId,
+        placeName = placeName,
         jobId = game.JobId,
         UTC = UTC or 0,
         UTS = UTS or 0,

@@ -1,10 +1,54 @@
 require("dotenv").config();
 
 const http = require("http");
+const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
+
+const KNOWN_MAPS = {
+  "93712201161812": "LEGACY | Lobby",
+  "13775256536": "[LEGACY] Toilet Tower Defense",
+  "unknown": "Unknown Place"
+};
+
+const placeNameCache = { ...KNOWN_MAPS };
+
+
+function fetchPlaceNameFromRoblox(placeId) {
+  return new Promise((resolve) => {
+    if (!placeId || placeId === "unknown" || isNaN(placeId)) {
+      return resolve(null);
+    }
+    const url = `https://economy.roblox.com/v2/assets/${placeId}/details`;
+    https.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+      }
+    }, (res) => {
+      if (res.statusCode !== 200) {
+        return resolve(null);
+      }
+      let raw = "";
+      res.on("data", chunk => raw += chunk);
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.Name) {
+            resolve(parsed.Name);
+          } else {
+            resolve(null);
+          }
+        } catch {
+          resolve(null);
+        }
+      });
+    }).on("error", () => {
+      resolve(null);
+    });
+  });
+}
 
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.resolve(__dirname, "public");
@@ -162,6 +206,9 @@ function rowToPlayer(row) {
     ...(row.titan != null ? { TITAN: row.titan } : {}),
   };
 
+  const rawPlaceName = row.place_name || row.place_id;
+  const placeName = KNOWN_MAPS[row.place_id] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
+
   return {
     id: row.id,
     userId: row.user_id,
@@ -170,7 +217,7 @@ function rowToPlayer(row) {
     coins: Number(row.coins || 0),
     status: row.status,
     placeId: row.place_id,
-    placeName: row.place_name,
+    placeName: placeName,
     jobId: row.job_id,
     units: normalizeUnitsObject(rawUnits),
     firstSeenAt: Number(row.first_seen_at || 0),
@@ -275,6 +322,9 @@ async function getPlayersFromInventory(robloxIds) {
     const prof = profileByPlayerId[state.player_id] || {};
     const invKey = `${state.player_id}:${state.place_id}`;
     const units = normalizeUnitsObject(inventoryByKey[invKey] || {});
+    
+    const rawPlaceName = placeNameById[state.place_id] || state.place_id;
+    const placeName = KNOWN_MAPS[state.place_id] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
 
     return {
       id: state.player_id,
@@ -284,7 +334,7 @@ async function getPlayersFromInventory(robloxIds) {
       coins: Number(state.coins || 0),
       status: state.status || "Online",
       placeId: state.place_id,
-      placeName: placeNameById[state.place_id] || state.place_id,
+      placeName: placeName,
       jobId: state.job_id || "",
       units,
       firstSeenAt: state.last_seen_at ? new Date(state.last_seen_at).getTime() : 0,
@@ -338,10 +388,38 @@ async function upsertPlayer(player) {
   );
   if (result.error) throw new Error(result.error.message);
 
+  let placeName = player.placeName;
+  if (!placeName || placeName === placeId || !isNaN(placeName)) {
+    if (placeNameCache[placeId]) {
+      placeName = placeNameCache[placeId];
+    } else {
+      // Query database first to see if we already have a real name saved
+      const { data: existingPlace } = await db
+        .from("game_places")
+        .select("place_name")
+        .eq("place_id", placeId)
+        .maybeSingle();
+
+      if (existingPlace && existingPlace.place_name && isNaN(existingPlace.place_name) && existingPlace.place_name !== placeId) {
+        placeName = existingPlace.place_name;
+        placeNameCache[placeId] = placeName;
+      } else {
+        // Fetch from Roblox
+        const fetchedName = await fetchPlaceNameFromRoblox(placeId);
+        if (fetchedName) {
+          placeName = fetchedName;
+          placeNameCache[placeId] = fetchedName;
+        } else {
+          placeName = placeId === "unknown" ? "Unknown Place" : placeId;
+        }
+      }
+    }
+  }
+
   result = await db.from("game_places").upsert(
     {
       place_id: placeId,
-      place_name: player.placeName || (placeId === "unknown" ? "Unknown Place" : placeId),
+      place_name: placeName,
       updated_at: nowIso,
     },
     { onConflict: "place_id" }

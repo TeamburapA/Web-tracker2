@@ -1,109 +1,83 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="th">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register — By.Chick Chick</title>
-  <meta name="description" content="Create your By.Chick Chick account for real-time Roblox analytics." />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/theme.css" />
+  <title>Register — Web Tracker Suite</title>
+  <meta name="description" content="Create your Web Tracker account." />
   <link rel="stylesheet" href="/css/auth.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 </head>
 
-<body class="auth-page auth-page--register">
+<body>
+  <div class="auth-bg">
+    <div class="auth-glow"></div>
 
-  <!-- Decorative layers -->
-  <div class="auth-bg-mesh" aria-hidden="true"></div>
-  <div class="auth-bg-grid" aria-hidden="true"></div>
-  <div class="auth-grid" aria-hidden="true"></div>
-  <div class="auth-noise" aria-hidden="true"></div>
-  <div class="auth-orb auth-orb--1" aria-hidden="true"></div>
-  <div class="auth-orb auth-orb--2" aria-hidden="true"></div>
-
-  <main class="auth-wrap auth-wrap--register">
-
-    <!-- Brand -->
-    <header class="auth-shell-brand auth-shell-brand--register">
-      <span class="brand-mark">
-        <span class="brand-mark-text">CC</span>
-        <span class="brand-mark-ring"></span>
-      </span>
-      <div>
-        <h1>By.Chick Chick</h1>
-        <p class="brand-tagline">Account Provisioning</p>
-      </div>
-    </header>
-
-    <!-- Register card -->
-    <section class="auth-card auth-card--register" aria-label="Register">
-      <div class="auth-card-glow" aria-hidden="true"></div>
-
-      <header class="auth-header">
-        <div class="chick-icon">
-          <span class="brand-mark-text">CC</span>
-          <span class="brand-mark-ring"></span>
+    <div class="auth-card">
+      <!-- Logo Section -->
+      <div class="auth-logo">
+        <span class="auth-logo-icon">🐥</span>
+        <div>
+          <h1>Chick Chick</h1>
+          <p>Create Account</p>
         </div>
-        <h1 class="auth-title">Create Account</h1>
-        <p class="auth-subtitle">Join the suite and get access to real-time analytics.</p>
-      </header>
+      </div>
 
+      <h2 class="auth-title">สมัครสมาชิกใหม่</h2>
+
+      <!-- Alerts -->
       <div id="authError" class="auth-alert auth-alert-error" hidden></div>
       <div id="authSuccess" class="auth-alert auth-alert-success" hidden></div>
 
-      <form id="registerForm" class="auth-form" autocomplete="on" novalidate>
+      <form id="registerForm" autocomplete="on" novalidate>
+        <!-- Email Field -->
         <div class="field">
-          <label for="regEmail">Email Address</label>
+          <label for="regEmail">ที่อยู่อีเมล (Email Address)</label>
           <div class="input-wrap">
-            <span class="material-symbols-outlined input-icon">mail</span>
             <input id="regEmail" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
           </div>
         </div>
 
+        <!-- Password Field -->
         <div class="field">
-          <label for="regPassword">Create Password</label>
+          <label for="regPassword">
+            รหัสผ่าน (Password)
+            <span class="field-hint">(อย่างน้อย 6 ตัวอักษร)</span>
+          </label>
           <div class="input-wrap">
-            <span class="material-symbols-outlined input-icon">lock</span>
-            <input id="regPassword" type="password" name="password" placeholder="Min. 6 characters" autocomplete="new-password" required />
+            <input id="regPassword" type="password" name="password" placeholder="ตั้งรหัสผ่านของคุณ" autocomplete="new-password" required />
             <button type="button" class="toggle-pw" id="togglePwReg" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
           </div>
         </div>
 
+        <!-- Confirm Password Field -->
         <div class="field">
-          <label for="regConfirm">Confirm Password</label>
+          <label for="regConfirm">ยืนยันรหัสผ่าน (Confirm Password)</label>
           <div class="input-wrap">
-            <span class="material-symbols-outlined input-icon">shield_lock</span>
-            <input id="regConfirm" type="password" name="confirm" placeholder="Repeat your password" autocomplete="new-password" required />
+            <input id="regConfirm" type="password" name="confirm" placeholder="ป้อนรหัสผ่านอีกครั้ง" autocomplete="new-password" required />
             <button type="button" class="toggle-pw" id="togglePwCfm" aria-label="Toggle password visibility">
               <span class="material-symbols-outlined">visibility</span>
             </button>
           </div>
         </div>
 
+        <!-- Submit button -->
         <button type="submit" class="btn-primary" id="registerBtn">
-          <span class="btn-text">Create Account</span>
-          <span class="material-symbols-outlined btn-icon">arrow_forward</span>
-          <span class="btn-spinner" hidden></span>
+          <span class="btn-text">สร้างบัญชีผู้ใช้</span>
+          <span class="btn-spinner" style="display: none;"></span>
         </button>
       </form>
 
+      <!-- Footer redirection links -->
       <p class="auth-footer">
-        Already have an account?
-        <a href="/login.html">Sign in</a>
+        มีบัญชีใช้งานอยู่แล้ว?
+        <a href="/login.html">เข้าสู่ระบบ</a>
       </p>
-    </section>
-
-    <!-- Feature badges -->
-    <div class="auth-features" aria-hidden="true">
-      <span class="auth-feature"><span class="material-symbols-outlined">shield</span>Secure</span>
-      <span class="auth-feature"><span class="material-symbols-outlined">query_stats</span>Analytics</span>
-      <span class="auth-feature"><span class="material-symbols-outlined">bolt</span>Fast</span>
     </div>
-  </main>
-
-  <div class="auth-status-pill"><span class="dot-online"></span>Systems Online</div>
+  </div>
 
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/ui.js"></script>

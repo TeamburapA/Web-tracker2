@@ -1,181 +1,197 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="th">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard — By.Chick Chick</title>
-  <meta name="description" content="By.Chick Chick real-time Roblox dashboard with player stats, coins, and analytics." />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-    rel="stylesheet" />
+  <title>Dashboard — Chick Chick tracker</title>
+  <meta name="description" content="Professional real-time Roblox player dashboard and Web Tracker." />
   <link rel="stylesheet" href="/css/theme.css" />
-  <link rel="stylesheet" href="/css/dashboard.css" />
 </head>
 
-<body class="dash-body">
-  <div class="dash-backdrop" aria-hidden="true"></div>
-  <div class="dash-noise" aria-hidden="true"></div>
+<body>
+  <div class="app-container">
 
-  <!-- ═══════════════ HEADER ═══════════════ -->
-  <header class="dash-header">
-    <div class="dash-header-left">
-      <span class="dash-brand">
-        <span class="dash-brand-icon"><span>CC</span></span>
-        <span class="dash-brand-text">By.Chick Chick</span>
-      </span>
-
-      <div class="dash-header-stats">
-        <div class="dash-stat">
-          <label>Online</label>
-          <span id="onlineCount">0</span>
-        </div>
-        <div class="dash-stat-divider"></div>
-        <div class="dash-stat">
-          <label>Total Coins</label>
-          <span id="totalCoins">0</span>
-        </div>
-        <div class="dash-stat-divider"></div>
-        <div class="dash-stat">
-          <label>Total Units</label>
-          <span id="totalUnits">0</span>
+    <!-- ═══════════ SIDEBAR (LEFT TABS) ═══════════ -->
+    <aside class="sidebar">
+      <!-- Sidebar Header -->
+      <div class="sidebar-header">
+        <span class="logo-icon">🐥</span>
+        <div class="logo-text">
+          <h1>Chick Chick </h1>
+          <p>Web Tracker</p>
         </div>
       </div>
-    </div>
 
-    <nav class="dash-tabs" aria-label="Dashboard sections">
-      <a class="dash-tab active" href="/">
-        <span class="material-symbols-outlined">monitoring</span>
-        Stats
-      </a>
-    </nav>
-
-    <div class="dash-header-right user-info">
-      <button type="button" id="copyAllBtn" class="btn-copy btn-copy--top">
-        <span class="material-symbols-outlined">content_copy</span>
-        Copy Key
-      </button>
-      <button class="icon-btn" type="button" aria-label="Notifications">
-        <span class="material-symbols-outlined">notifications</span>
-      </button>
-      <span class="user-avatar" aria-hidden="true">🐥</span>
-      <span id="userEmail" class="user-email"></span>
-      <button type="button" id="logoutBtn" class="btn-logout" title="Logout">
-        <span class="material-symbols-outlined">logout</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- ═══════════════ MAIN ═══════════════ -->
-  <main class="app">
-
-    <!-- Hero -->
-    <section class="hero-panel" id="script-key">
-      <div class="hero-copy">
-        <div class="hero-kicker">
-          <span class="hero-kicker-line"></span>
-          Script Key
-        </div>
-        <h1>Active Script Key</h1>
+      <!-- Map Tabs Navigation -->
+      <div class="sidebar-nav">
+        <div class="nav-title">Map All</div>
+        <nav id="mapTabsList" class="map-tabs">
+       
+          <!-- Dynamic map tabs will insert here -->
+        </nav>
       </div>
-      <span class="hero-key-mark material-symbols-outlined" aria-hidden="true">vpn_key</span>
-    </section>
 
-    <!-- Key display -->
-    <section class="key-panel">
-      <div class="key-display">
-        <div class="key-display-glow" aria-hidden="true"></div>
-        <code id="scriptKeyValue">Loading...</code>
-        <button type="button" id="scriptKeyCopyBtn" class="btn-key-copy">
-          <span class="material-symbols-outlined">content_copy</span>
-          Copy
+      <!-- Sidebar Footer User Profile & Logout -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar-circle" id="userAvatarInitials">U</div>
+          <div class="user-details">
+            <div id="userEmail" class="user-name-label">user@example.com</div>
+            <div class="user-role-label">Premium Member</div>
+          </div>
+        </div>
+        <button type="button" id="logoutBtn" class="btn-sidebar-logout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Logout
         </button>
       </div>
-    </section>
+    </aside>
 
-    <!-- Linked accounts -->
-    <section class="accounts-panel">
-      <div class="accounts-header">
-        <span class="material-symbols-outlined">group</span>
-        Linked Roblox Accounts
-      </div>
-      <div class="accounts-row">
-        <div id="accountsList" class="accounts-list">
-          <span class="account-empty">No linked Roblox accounts yet</span>
+    <!-- ═══════════ MAIN CONTENT AREA (RIGHT) ═══════════ -->
+    <main class="main-content">
+      <!-- Main Header Row -->
+      <header class="main-header">
+        <div class="welcome-section">
+          <h2>แผงควบคุมระบบ / Dashboard</h2>
+          <p>ตรวจจับและบันทึกข้อมูลบัญชี Roblox แบบเรียลไทม์</p>
         </div>
-      </div>
-      <span id="accountsCount" class="accounts-count-sr">0</span>
-    </section>
+      </header>
 
-    <!-- Data table -->
-    <section class="table-section glass-card">
-      <div class="filters">
-        <label class="search-box" for="searchInput">
-          <span class="material-symbols-outlined">search</span>
-          <input id="searchInput" type="search" placeholder="Search accounts or IDs…" />
-        </label>
-
-        <div class="filters-right">
-          <label class="sort-label" for="sortSelect">Sort:</label>
-          <select id="sortSelect">
-            <option value="coins">Coins (High)</option>
-            <option value="updated">Last Update</option>
-            <option value="utc">UTC (High)</option>
-            <option value="uts">UTS (High)</option>
-            <option value="cinema">Cinema (High)</option>
-          </select>
-          <button type="button" id="copyScriptBtnMirror" class="btn-copy btn-copy--table">
-            <span class="material-symbols-outlined">terminal</span>
-            Copy Script
-          </button>
-          <button type="button" id="refreshBtn" class="btn-refresh" title="Refresh data">
-            <span class="refresh-icon material-symbols-outlined">refresh</span>
-            Refresh
-          </button>
+      <!-- Stats Grid & Script Key Card -->
+      <section class="top-layout">
+        <!-- Stat: Online Roblox Accounts -->
+        <div class="stat-card">
+          <div class="stat-label">บัญชีออนไลน์ (Online)</div>
+          <div class="stat-value" id="onlineCount">0</div>
         </div>
-      </div>
 
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Account</th>
-              <th>Coins</th>
-              <th>UTC</th>
-              <th>UTS</th>
-              <th>Cinema</th>
-              <th>Status</th>
-              <th>Last Update</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="playerRows">
-            <tr>
-              <td colspan="8" class="empty">Loading...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <footer class="table-footer">
-        <span id="tableCountLabel">Live roster standby</span>
-        <div class="pager" aria-hidden="true">
-          <button>Previous</button>
-          <button class="active">1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>Next</button>
+        <!-- Stat: Total Linked Roblox Accounts -->
+        <div class="stat-card">
+          <div class="stat-label">บัญชีทั้งหมด (Total)</div>
+          <div class="stat-value" id="accountsCount">0</div>
         </div>
+
+        <!-- Script Key Control Card -->
+        <div class="key-dashboard-card">
+          <div class="key-card-header">
+            <span class="key-title">Script Key สำหรับนำไปรัน</span>
+            <span class="key-sub">— คัดลอก Key หรือตัวสคริปต์ได้ที่นี่</span>
+          </div>
+          
+          <div class="key-actions-row">
+            <!-- Box display key -->
+            <div class="key-display-box">
+              <code id="scriptKeyValue">กำลังโหลด...</code>
+            </div>
+            
+            <!-- Copy Raw Key -->
+            <button type="button" id="scriptKeyCopyBtn" class="btn-key-action" title="คัดลอกเฉพาะรหัส Key">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              คัดลอก Key
+            </button>
+            
+            <!-- Copy Full Lua Script -->
+            <button type="button" id="copyAllBtn" class="btn-key-action btn-key-action-primary" title="คัดลอกสคริปต์ Roblox สำหรับรัน">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              คัดลอก Script
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Linked Roblox Accounts Badge Section -->
+      <section class="linked-accounts-container">
+        <div class="linked-header">
+          <div class="linked-title">
+            <span>บัญชี Roblox ที่ทำการเชื่อมโยง</span>
+            <span class="linked-badge-count" id="linkedAccountsCountBadge">0</span>
+          </div>
+        </div>
+        
+        <div id="accountsList" class="accounts-grid">
+          <span class="accounts-empty-state">ยังไม่มี Roblox account — รัน script ก่อนนะ</span>
+        </div>
+      </section>
+
+      <!-- Live Roster Table & Search/Filter Controls -->
+      <section class="table-section">
+        <!-- Controls Header -->
+        <div class="table-controls">
+          <div class="table-title-group">
+            <h3>แถบข้อมูลการทำงานบัญชีทั้งหมด</h3>
+            <p id="tableCountLabel">Live roster standby</p>
+          </div>
+          
+          <div class="controls-right">
+            <!-- Search field -->
+            <div class="search-wrapper">
+              <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="12.2" x2="16.65" y2="12.2"></line><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input id="searchInput" type="search" class="search-input" placeholder="ค้นหาบัญชี หรือ Roblox ID..." />
+            </div>
+            
+            <!-- Sort dropdown -->
+            <select id="sortSelect" class="sort-select">
+              <option value="coins">เหรียญ (Coins - สูงสุด)</option>
+              <option value="updated">อัปเดตล่าสุด (Last Update)</option>
+              <option value="utc">UTC (สูงสุด)</option>
+              <option value="uts">UTS (สูงสุด)</option>
+              <option value="cinema">Cinema (สูงสุด)</option>
+            </select>
+            
+            <!-- Hidden copy mirror button to maintain legacy click bindings if any -->
+            <button type="button" id="copyScriptBtnMirror" style="display: none;"></button>
+            
+            <!-- Refresh button -->
+            <button type="button" id="refreshBtn" class="btn-refresh-dashboard" title="รีเฟรชข้อมูล">
+              <svg class="refresh-spin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Wrapper -->
+        <div class="table-wrapper">
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th>บัญชีผู้ใช้ (Account)</th>
+                <th>Coins (เหรียญ)</th>
+                <th>UTC</th>
+                <th>UTS</th>
+                <th>Cinema</th>
+                <th>สถานะ (Status)</th>
+                <th>อัปเดตล่าสุด (Last Update)</th>
+                <th>จัดการ (Action)</th>
+              </tr>
+            </thead>
+            <tbody id="playerRows">
+              <tr>
+                <td colspan="8" class="empty-table-state">กำลังดึงข้อมูลบัญชี Roblox...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Stats Summaries Banner (Bottom row info items) -->
+      <footer style="margin-top: 20px; display: flex; gap: 20px; justify-content: flex-end; font-size: 12px; color: var(--text-muted);">
+        <div>เหรียญรวมทั้งหมด: <strong id="totalCoins" style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div>ยูนิตรวมทั้งหมด: <strong id="totalUnits" style="color: #9b8cfa; font-family: 'JetBrains Mono', monospace;">0</strong></div>
       </footer>
-    </section>
-  </main>
+    </main>
+  </div>
 
-  <div id="copyToast" class="copy-toast" hidden>Copied</div>
+  <!-- Toast notification system -->
+  <div id="copyToast" class="copy-toast" style="display: none;">คัดลอกสำเร็จ ✓</div>
 
+  <!-- Legacy mirror button listener -->
   <script>
     document.getElementById("copyScriptBtnMirror")?.addEventListener("click", () => {
       document.getElementById("copyAllBtn")?.click();
     });
   </script>
+
+  <!-- Application scripts -->
   <script type="module" src="/js/app.js"></script>
 </body>
 
