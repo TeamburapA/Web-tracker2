@@ -3,8 +3,8 @@ repeat task.wait(5) until game:IsLoaded()
 _G.ConfigGame = {
     Dashboard = {
         Enable = true,
-        Url = "https://web-tracker2.vercel.app/update",
-        Key = "เอา_script_key_จากหน้าเว็บมาใส่ตรงนี้",
+        Url = "https://web-tracker2.vercel.app/roblox/update",
+        Key = "a49969d795ad4e0fbc2962042230e0c8",
         Interval = 5,
     },
 }
@@ -17,6 +17,7 @@ repeat task.wait(.2) until player
 
 local lastDashboardSend = 0
 
+-- ฟังก์ชันดึงเหรียญทอง (leaderstats) เป็นค่าพื้นฐานที่ส่งทุกแมพ
 local function getCoins()
     local stats = player:FindFirstChild("leaderstats")
     local coins = stats and stats:FindFirstChild("Coins")
@@ -28,7 +29,8 @@ local function getCoins()
     return tonumber(coins.Value) or 0
 end
 
-local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
+-- ฟังก์ชันหลักในการส่งข้อมูลไปยัง Dashboard หลังบ้าน
+local function SendDashboardUpdate(statusText, itemsArray)
     local cfg = _G.ConfigGame and _G.ConfigGame.Dashboard
     if not cfg or not cfg.Enable then return end
     if not cfg.Url or cfg.Url == "" then return end
@@ -38,6 +40,7 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
     end
     lastDashboardSend = os.clock()
 
+    -- ตรวจสอบ Executor Request Function
     local requestFunc =
         (syn and syn.request)
         or (http and http.request)
@@ -54,8 +57,10 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
         placeName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
     end)
 
+    -- โครงสร้าง JSON แบบยืดหยุ่นสูงสุด ส่งข้อมูลพื้นฐานพร้อมอาร์เรย์ของไอเท็มเฉพาะแมพ
     local body = HttpService:JSONEncode({
         key = cfg.Key,
+        script_key = cfg.Key,
         userId = player.UserId,
         name = player.Name,
         displayName = player.DisplayName,
@@ -64,10 +69,8 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
         placeId = game.PlaceId,
         placeName = placeName,
         jobId = game.JobId,
-        UTC = UTC or 0,
-        UTS = UTS or 0,
-        TITAN = TITAN or 0,
-        Cenima = Cenima or 0,
+        inventory = itemsArray or {},
+        items = itemsArray or {} -- ส่งเป็น Array ลิสต์ไอเท็มไปให้หลังบ้านวนลูปเซฟลง player_inventory
     })
 
     task.spawn(function()
@@ -77,7 +80,7 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
                 Method = "POST",
                 Headers = {
                     ["Content-Type"] = "application/json",
-                    ["X-Dashboard-Key"] = cfg.Key or "",
+                    ["X-Script-Key"] = cfg.Key or "",
                 },
                 Body = body
             })
@@ -91,40 +94,49 @@ local function SendDashboardUpdate(statusText, UTC, UTS, TITAN, Cenima)
     end)
 end
 
+-- ลูปทำงานหลัก (ตรวจสอบไอเท็มตามแมพทุกๆ 1 วินาที)
 while task.wait(1) do
-    local UTC = 0
-    local UTS = 0
-    local TITAN = 0
-    local Cenima = 0
+    local currentPlaceId = game.PlaceId
+    local itemsToSend = {} -- ตารางสำหรับเก็บข้อมูลที่จะแปลงเป็น Dynamic Array ส่งไปหลังบ้าน
 
-    pcall(function()
-        local lobby = player.PlayerGui:FindFirstChild("Lobby")
-        local unitFrame = lobby and lobby:FindFirstChild("UnitFrame")
-        local unitList = unitFrame and unitFrame:FindFirstChild("UnitList")
+    -- ═════════════════════════════════════════════════════════════
+    -- แมพที่ 1: Toilet Tower Defense (PlaceId: 13775256536)
+    -- ═════════════════════════════════════════════════════════════
+    if currentPlaceId == 13775256536 or currentPlaceId == 11654637731 then
+        local UTC = 0
+        local UTS = 0
+        local TITAN = 0
+        local Cenima = 0
 
-        if unitList then
-            for _, row in pairs(unitList:GetChildren()) do
-                if string.sub(row.Name, 1, 3) == "Row" then
-                    for _, desc in pairs(row:GetDescendants()) do
-                        if desc.Name == "Price" and desc:IsA("TextLabel") then
-                            local priceText = string.gsub(desc.Text, "%s+", "")
+        pcall(function()
+            local lobby = player.PlayerGui:FindFirstChild("Lobby")
+            local unitFrame = lobby and lobby:FindFirstChild("UnitFrame")
+            local unitList = unitFrame and unitFrame:FindFirstChild("UnitList")
 
-                            local troop = desc.Parent
-                            local gradient = troop and troop:FindFirstChild("RarityGradient")
+            if unitList then
+                for _, row in pairs(unitList:GetChildren()) do
+                    if string.sub(row.Name, 1, 3) == "Row" then
+                        for _, desc in pairs(row:GetDescendants()) do
+                            if desc.Name == "Price" and desc:IsA("TextLabel") then
+                                local priceText = string.gsub(desc.Text, "%s+", "")
 
-                            if gradient and gradient:IsA("UIGradient") then
-                                local kp = gradient.Color.Keypoints
-                                local r = kp[1].Value.R
-                                local g = kp[1].Value.G
-                                local b = kp[1].Value.B
+                                local troop = desc.Parent
+                                local gradient = troop and troop:FindFirstChild("RarityGradient")
 
-                                if r >= 0.95 and g <= 0.05 and b <= 0.05 then
-                                    if priceText == "$1500" then
-                                        UTC = UTC + 1
-                                    elseif priceText == "$1000" then
-                                        UTS = UTS + 1
-                                    elseif priceText == "$2000" then
-                                        Cenima = Cenima + 1
+                                if gradient and gradient:IsA("UIGradient") then
+                                    local kp = gradient.Color.Keypoints
+                                    local r = kp[1].Value.R
+                                    local g = kp[1].Value.G
+                                    local b = kp[1].Value.B
+
+                                    if r >= 0.95 and g <= 0.05 and b <= 0.05 then
+                                        if priceText == "$1500" then
+                                            UTC = UTC + 1
+                                        elseif priceText == "$1000" then
+                                            UTS = UTS + 1
+                                        elseif priceText == "$2000" then
+                                            Cenima = Cenima + 1
+                                        end
                                     end
                                 end
                             end
@@ -132,10 +144,38 @@ while task.wait(1) do
                     end
                 end
             end
-        end
-    end)
+        end)
 
-    SendDashboardUpdate("Online", UTC, UTS, TITAN, Cenima)
+        -- จัดรูปแบบข้อมูล TTD ยัดใส่ Array (ระบุชื่อ item_id ให้ตรงกับที่คุณต้องการนำไปคิวรีหน้าเว็บ)
+        table.insert(itemsToSend, { item_id = "UTC", amount = UTC })
+        table.insert(itemsToSend, { item_id = "UTS", amount = UTS })
+        table.insert(itemsToSend, { item_id = "TITAN", amount = TITAN })
+        table.insert(itemsToSend, { item_id = "Cenima", amount = Cenima })
 
-    print("Sent Dashboard:", "Coins", getCoins(), "UTC", UTC, "UTS", UTS, "TITAN", TITAN, "Cenima", Cenima)
+    -- ═════════════════════════════════════════════════════════════
+    -- แมพที่ 2: Survive Zombie Arena (PlaceId: 114204398207377)
+    -- ═════════════════════════════════════════════════════════════
+    elseif currentPlaceId == 114204398207377 then
+        local Credits = 0
+        local VoidShards = 0
+        local Class = "None"
+
+        pcall(function()
+            Credits = tonumber(player:FindFirstChild("Credits") and player.Credits.Value) or 0
+            VoidShards = tonumber(player:FindFirstChild("VoidShards") and player.VoidShards.Value) or 0
+            Class = player:FindFirstChild("SelectedClass") and player.SelectedClass.Value or "None"
+        end)
+
+        -- จัดรูปแบบข้อมูลแมพซอมบี้ ยัดใส่ Array
+        -- (ถ้าค่าเป็นตัวเลขให้ส่งช่อง amount ถ้าเป็นข้อความให้ส่งช่อง text_value เพื่อให้สอดคล้องกับตาราง player_inventory)
+        table.insert(itemsToSend, { item_id = "Credits", amount = Credits })
+        table.insert(itemsToSend, { item_id = "VoidShards", amount = VoidShards })
+        table.insert(itemsToSend, { item_id = "SelectedClass", text_value = Class })
+    end
+
+    -- ส่งข้อมูลไปอัปเดตที่ Dashboard หลังบ้าน
+    SendDashboardUpdate("Online", itemsToSend)
+
+    -- พิมพ์ Log เพื่อตรวจสอบการทำงานในหน้าจอ F9 Console ของเกม
+    print("Sent Dynamic Dashboard Data successfully! Items sent count: " .. #itemsToSend)
 end

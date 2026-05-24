@@ -10,6 +10,7 @@ const { createClient } = require("@supabase/supabase-js");
 const KNOWN_MAPS = {
   "93712201161812": "LEGACY | Lobby",
   "13775256536": "[LEGACY] Toilet Tower Defense",
+  "114204398207377": "Survive Zombie Arena",
   "unknown": "Unknown Place"
 };
 
@@ -140,7 +141,12 @@ async function upsertRobloxAccount(userId, robloxUserId, robloxUsername, display
 
 function normalizeItemName(name) {
   if (name === "TITAN" || name === "Cenima") return "Cinema";
-  return String(name || "").trim();
+  const s = String(name || "").trim();
+  // Preserve casing for known SZA items
+  if (s === "Credits" || s === "credits") return "Credits";
+  if (s === "VoidShards" || s === "voidshards" || s === "void_shards") return "VoidShards";
+  if (s === "Class" || s === "class" || s === "SelectedClass") return "Class";
+  return s;
 }
 
 function normalizeItemId(name) {
@@ -155,6 +161,9 @@ function itemNameFromId(itemId) {
   if (id === "utc") return "UTC";
   if (id === "uts") return "UTS";
   if (id === "cinema" || id === "cenima" || id === "titan") return "Cinema";
+  if (id === "credits") return "Credits";
+  if (id === "voidshards" || id === "void_shards") return "VoidShards";
+  if (id === "class" || id === "selectedclass") return "Class";
   return String(itemId || "");
 }
 
@@ -163,11 +172,16 @@ function normalizeUnitsObject(units) {
 
   for (const [key, value] of Object.entries(units || {})) {
     const name = normalizeItemName(key);
-    const num = Number(value || 0);
-    if (name === "Cinema") {
-      out.Cinema = Math.max(out.Cinema || 0, num);
+    if (name === "Class") {
+      // Class is a string value, not numeric
+      out.Class = String(value || "None");
     } else {
-      out[name] = num;
+      const num = Number(value || 0);
+      if (name === "Cinema") {
+        out.Cinema = Math.max(out.Cinema || 0, num);
+      } else {
+        out[name] = num;
+      }
     }
   }
 
@@ -190,7 +204,12 @@ function normalizeUnits(payload) {
     const itemName = normalizeItemName(name);
     const itemId = normalizeItemId(itemName);
     if (!itemId) continue;
-    units[itemName] = Math.max(units[itemName] || 0, Number(value || 0));
+    if (itemName === "Class") {
+      // Class is a string value (e.g. "Warrior", "Mage")
+      units[itemName] = String(value || "None");
+    } else {
+      units[itemName] = Math.max(units[itemName] || 0, Number(value || 0));
+    }
   }
 
   return units;
@@ -244,101 +263,77 @@ function normalizeUpdate(payload) {
   };
 }
 
+// ── ค้นหาและแก้ไขฟังก์ชันนี้ในไฟล์ server.js ──
 async function getPlayersFromInventory(robloxIds) {
+  if (!robloxIds || robloxIds.length === 0) return [];
+
   const db = getSupabase();
 
-  const { data: profiles, error: profErr } = await db
-    .from("player_profiles")
-    .select("player_id, roblox_user_id, username, display_name")
-    .in("roblox_user_id", robloxIds);
+  // 1. ดึงข้อมูลจากตารางผู้เล่นหลัก
+  const { data: players, error: pErr } = await db
+    .from("players")
+    .select("*")
+    .in("user_id", robloxIds);
 
-  if (profErr) throw profErr;
-  if (!profiles?.length) return [];
+  if (pErr) throw pErr;
+  if (!players || players.length === 0) return [];
 
-  const playerIds = profiles.map((p) => p.player_id);
-  const profileByPlayerId = Object.fromEntries(profiles.map((p) => [p.player_id, p]));
-
-  const { data: states, error: stErr } = await db
-    .from("player_place_state")
-    .select("player_id, place_id, job_id, status, coins, last_seen_at, updated_at")
-    .in("player_id", playerIds)
-    .order("updated_at", { ascending: false });
-
-  if (stErr) throw stErr;
-  if (!states?.length) return [];
-
-  const { data: inventory, error: invErr } = await db
+  // 2. 🔥 ดึงข้อมูลไอเท็มทั้งหมดจากตารางใหม่ (player_inventory) มาเชื่อมโยง
+  const { data: invItems, error: invErr } = await db
     .from("player_inventory")
-    .select("player_id, place_id, item_id, amount")
-    .in("player_id", playerIds);
+    .select("*")
+    .in("player_id", robloxIds);
 
   if (invErr) throw invErr;
 
-  const itemIds = [...new Set((inventory || []).map((r) => r.item_id))];
-  let itemNameById = {};
-
-  if (itemIds.length) {
-    const { data: items, error: itemErr } = await db
-      .from("game_items")
-      .select("item_id, item_name")
-      .in("item_id", itemIds);
-
-    if (!itemErr && items) {
-      itemNameById = Object.fromEntries(items.map((i) => [i.item_id, i.item_name]));
-    }
-  }
-
-  const inventoryByKey = {};
-  for (const row of inventory || []) {
-    const key = `${row.player_id}:${row.place_id}`;
-    if (!inventoryByKey[key]) inventoryByKey[key] = {};
-
-    const itemName = itemNameById[row.item_id] || itemNameFromId(row.item_id);
-    const canonical = normalizeItemName(itemName);
-    const num = Number(row.amount || 0);
-
-    if (canonical === "Cinema") {
-      inventoryByKey[key].Cinema = Math.max(inventoryByKey[key].Cinema || 0, num);
-    } else {
-      inventoryByKey[key][canonical] = num;
-    }
-  }
-
-  const placeIds = [...new Set(states.map((s) => s.place_id).filter(Boolean))];
+  // 3. ดึงข้อมูลชื่อแมพจากตาราง game_places
+  const placeIds = [...new Set(players.map(p => p.place_id).filter(Boolean))];
   let placeNameById = {};
-
   if (placeIds.length) {
     const { data: places } = await db
       .from("game_places")
       .select("place_id, place_name")
       .in("place_id", placeIds);
-
     if (places) {
-      placeNameById = Object.fromEntries(places.map((p) => [p.place_id, p.place_name]));
+      placeNameById = Object.fromEntries(places.map(p => [p.place_id, p.place_name]));
     }
   }
 
-  return states.map((state) => {
-    const prof = profileByPlayerId[state.player_id] || {};
-    const invKey = `${state.player_id}:${state.place_id}`;
-    const units = normalizeUnitsObject(inventoryByKey[invKey] || {});
-    
-    const rawPlaceName = placeNameById[state.place_id] || state.place_id;
-    const placeName = KNOWN_MAPS[state.place_id] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
+  // 4. ประกอบร่างจัดกลุ่มไอเท็มยัดลงกล่อง units ให้เข้าล็อกกับหน้าบ้าน app.js อัตโนมัติ
+  return players.map(p => {
+    const units = {};
+
+    // กรองหาไอเท็มเฉพาะของผู้เล่นคนนี้และแมพนี้
+    const pItems = (invItems || []).filter(item => item.player_id === p.user_id && item.place_id === p.place_id);
+
+    pItems.forEach(item => {
+      // แปลงไอดีไอเท็มเป็นชื่อไอเท็มแบบ canonical (เช่น class -> Class)
+      const displayName = itemNameFromId(item.item_id);
+      
+      // ถ้ามีค่าข้อความ (เช่น Class) ให้ใช้ text_value ถ้าไม่มีให้ดึงจำนวนเลข amount
+      if (item.text_value !== null && item.text_value !== undefined && item.text_value !== "") {
+        units[displayName] = item.text_value;
+      } else {
+        units[displayName] = Number(item.amount || 0);
+      }
+    });
+
+    const rawPlaceName = placeNameById[p.place_id] || p.place_id;
+    const placeName = KNOWN_MAPS[p.place_id] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
 
     return {
-      id: state.player_id,
-      userId: prof.roblox_user_id || state.player_id,
-      name: prof.username || "Unknown",
-      displayName: prof.display_name || "",
-      coins: Number(state.coins || 0),
-      status: state.status || "Online",
-      placeId: state.place_id,
+      id: p.user_id,
+      userId: p.user_id,
+      name: p.name,
+      displayName: p.display_name,
+      coins: Number(p.coins || 0),
+      status: p.status,
+      placeId: p.place_id,
       placeName: placeName,
-      jobId: state.job_id || "",
-      units,
-      firstSeenAt: state.last_seen_at ? new Date(state.last_seen_at).getTime() : 0,
-      updatedAt: state.updated_at ? new Date(state.updated_at).getTime() : 0,
+      jobId: p.job_id || "",
+      units: normalizeUnitsObject(units),
+      firstSeenAt: p.updated_at ? new Date(p.updated_at).getTime() : 0,
+      updatedAt: p.updated_at ? new Date(p.updated_at).getTime() : 0,
     };
   });
 }
@@ -354,21 +349,36 @@ async function getPlayersByUserId(userId) {
 
   const robloxIds = accounts.map((a) => a.roblox_user_id);
 
+  let fromInventory = [];
   try {
-    const fromInventory = await getPlayersFromInventory(robloxIds);
-    if (fromInventory.length) return fromInventory;
+    fromInventory = await getPlayersFromInventory(robloxIds);
   } catch (err) {
-    console.warn("getPlayersFromInventory failed, falling back to view:", err.message);
+    console.warn("getPlayersFromInventory failed:", err.message);
   }
 
-  const { data, error } = await getSupabase()
-    .from("dashboard_player_places")
-    .select("*")
-    .in("user_id", robloxIds)
-    .order("updated_at", { ascending: false });
+  // ค้นหา roblox_user_id ที่ยังไม่มีข้อมูลในตาราง players ใหม่ (เพื่อดึงจาก view เก่ามาผสม)
+  const foundIds = new Set(fromInventory.map(p => String(p.userId)));
+  const missingIds = robloxIds.filter(id => !foundIds.has(String(id)));
 
-  if (error) throw new Error(error.message);
-  return (data || []).map(rowToPlayer);
+  let fromView = [];
+  if (missingIds.length > 0) {
+    const { data, error } = await getSupabase()
+      .from("dashboard_player_places")
+      .select("*")
+      .in("user_id", missingIds);
+
+    if (error) {
+      console.warn("Querying dashboard_player_places view failed:", error.message);
+    } else if (data) {
+      fromView = data.map(rowToPlayer);
+    }
+  }
+
+  // รวมข้อมูลและเรียงลำดับตามเวลาอัปเดตล่าสุด
+  const combined = [...fromInventory, ...fromView];
+  combined.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  return combined;
 }
 
 async function upsertPlayer(player) {
@@ -440,16 +450,67 @@ async function upsertPlayer(player) {
   );
   if (result.error) throw new Error(result.error.message);
 
+  // ── Upsert ตาราง players เพื่อความสอดคล้องกับ /roblox/update
+  let playerError = null;
+  const playerPayloadBase = {
+    id: player.id,
+    user_id: player.id,
+    name: player.name || "Unknown",
+    display_name: player.displayName || "",
+    coins: Number(player.coins || 0),
+    status: player.status || "Online",
+    place_id: placeId,
+    job_id: String(player.jobId || ""),
+  };
+
+  const res1 = await db.from("players").upsert({
+    ...playerPayloadBase,
+    updated_at: nowIso
+  });
+
+  if (res1.error) {
+    const isOldSchemaError = res1.error.message.includes("bigint") ||
+      res1.error.message.includes("integer") ||
+      res1.error.message.includes("first_seen_at") ||
+      res1.error.message.includes("not-null");
+    if (isOldSchemaError) {
+      let firstSeen = Date.now();
+      try {
+        const { data: existing } = await db
+          .from("players")
+          .select("first_seen_at")
+          .eq("id", player.id)
+          .maybeSingle();
+        if (existing && existing.first_seen_at) {
+          firstSeen = Number(existing.first_seen_at);
+        }
+      } catch (err) { }
+
+      const res2 = await db.from("players").upsert({
+        ...playerPayloadBase,
+        first_seen_at: firstSeen,
+        updated_at: Date.now()
+      });
+      playerError = res2.error;
+    } else {
+      playerError = res1.error;
+    }
+  }
+  if (playerError) throw new Error(`players upsert failed: ${playerError.message}`);
+
   for (const [itemNameRaw, amountRaw] of Object.entries(player.units || {})) {
     const itemName = normalizeItemName(itemNameRaw);
     const itemId = normalizeItemId(itemName);
     if (!itemId) continue;
 
-    const amount = Number(amountRaw || 0);
+    // Handle string-type items (e.g., Class = "Warrior")
+    const isStringItem = (itemName === "Class");
+    const amount = isStringItem ? 0 : Number(amountRaw || 0);
+    const stringValue = isStringItem ? String(amountRaw || "None") : null;
 
     result = await db
       .from("game_items")
-      .upsert({ item_id: itemId, item_name: itemName, category: "unit", updated_at: nowIso }, { onConflict: "item_id" });
+      .upsert({ item_id: itemId, item_name: itemName, category: isStringItem ? "attribute" : "unit", updated_at: nowIso }, { onConflict: "item_id" });
     if (result.error) throw new Error(result.error.message);
 
     result = await db
@@ -460,9 +521,18 @@ async function upsertPlayer(player) {
     result = await db
       .from("player_inventory")
       .upsert(
-        { player_id: player.id, place_id: placeId, item_id: itemId, amount, updated_at: nowIso },
+        { player_id: player.id, place_id: placeId, item_id: itemId, amount, ...(stringValue != null ? { text_value: stringValue } : {}), updated_at: nowIso },
         { onConflict: "player_id,place_id,item_id" }
       );
+    // If text_value column doesn't exist yet, retry without it
+    if (result.error && result.error.message.includes("text_value")) {
+      result = await db
+        .from("player_inventory")
+        .upsert(
+          { player_id: player.id, place_id: placeId, item_id: itemId, amount, updated_at: nowIso },
+          { onConflict: "player_id,place_id,item_id" }
+        );
+    }
     if (result.error) throw new Error(result.error.message);
   }
 
@@ -649,6 +719,12 @@ async function handler(req, res) {
       return;
     }
 
+    // ── NEW: /roblox/update — Dynamic Inventory Schema ──────────────
+    if (req.method === "POST" && pathname === "/roblox/update") {
+      const robloxHandler = require("./api/roblox-update");
+      return robloxHandler(req, res);
+    }
+
     serveStatic(req, res);
   } catch (error) {
     console.error(`${req.method} ${pathname} error:`, error);
@@ -656,6 +732,7 @@ async function handler(req, res) {
   }
 }
 
+handler.getPlayersByUserId = getPlayersByUserId;
 module.exports = handler;
 
 if (require.main === module) {

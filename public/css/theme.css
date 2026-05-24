@@ -845,6 +845,24 @@ body {
   color: #9b8cfa;
 }
 
+.credits-metric {
+  color: #4ade80;
+}
+
+.voidshards-metric {
+  color: #c084fc;
+}
+
+.class-metric {
+  color: #67e8f9;
+}
+
+.metric-text {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+}
+
 /* Status Pill */
 .status-pill {
   display: inline-flex;

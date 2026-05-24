@@ -6,8 +6,11 @@ import { getToken, logout, initGuard, clearSession } from "./auth.js";
 const KNOWN_MAPS = {
   "93712201161812": "LEGACY | Lobby",
   "13775256536": "[LEGACY] Toilet Tower Defense",
+  "114204398207377": "Survive Zombie Arena",
   "unknown": "Unknown Place"
 };
+
+// Map columns are now discovered dynamically from player inventory units!
 
 
 // ── DOM References ────────────────────────────────────────────────────────────
@@ -126,6 +129,12 @@ async function buildLuaScript(scriptKey) {
     );
   }
 
+  // Ensure Roblox script points to the current website's origin + /roblox/update
+  script = script.replace(
+    /Url\s*=\s*["']([^"']+)["']/g,
+    `Url = "${window.location.origin}/roblox/update"`
+  );
+
   return script;
 }
 
@@ -167,6 +176,16 @@ function cinemaCount(u = {}) {
   );
 }
 
+// ── Dynamic total: sum ALL numeric values in units object ────────────────────
+function sumAllUnits(u = {}) {
+  let total = 0;
+  for (const val of Object.values(u)) {
+    if (typeof val === "number") total += val;
+    else if (typeof val === "string" && !isNaN(Number(val))) total += Number(val);
+  }
+  return total;
+}
+
 function escapeHtml(v) {
   return String(v)
     .replaceAll("&", "&amp;")
@@ -182,10 +201,22 @@ function sortedPlayers(list) {
 
   return [...list].sort((a, b) => {
     if (sort === "coins") return (b.coins || 0) - (a.coins || 0);
-    if (sort === "utc") return (b.units?.UTC || 0) - (a.units?.UTC || 0);
-    if (sort === "uts") return (b.units?.UTS || 0) - (a.units?.UTS || 0);
-    if (sort === "cinema") {
-      return cinemaCount(b.units) - cinemaCount(a.units);
+    if (sort === "updated") return (b.updatedAt || 0) - (a.updatedAt || 0);
+
+    // Dynamic sorting for dynamically discovered item columns
+    const cols = getActiveColumns();
+    const matchedCol = cols.find(c => c.sortKey === sort);
+    if (matchedCol) {
+      const valA = matchedCol.getter ? matchedCol.getter(a.units) : (a.units || {})[matchedCol.key];
+      const valB = matchedCol.getter ? matchedCol.getter(b.units) : (b.units || {})[matchedCol.key];
+
+      if (matchedCol.isText) {
+        const strA = String(valA || "").toLowerCase();
+        const strB = String(valB || "").toLowerCase();
+        return strA.localeCompare(strB);
+      } else {
+        return Number(valB || 0) - Number(valA || 0);
+      }
     }
 
     return (b.updatedAt || 0) - (a.updatedAt || 0);
@@ -239,7 +270,7 @@ function renderMapTabs() {
   // Group players by map (placeName fallback to placeId)
   const mapCounts = {};
   players.forEach(p => {
-    const rawMapName = p.placeName || p.placeId || "Unknown Map";
+const rawMapName = KNOWN_MAPS[p.placeId] || p.placeName || p.placeId || "Unknown Map";
     const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
     mapCounts[mapName] = (mapCounts[mapName] || 0) + 1;
   });
@@ -275,9 +306,106 @@ function renderMapTabs() {
   mapTabsListEl.insertAdjacentHTML('beforeend', html);
 }
 
+// ── Helper: Get active columns dynamically discovered from current players list ─
+function getActiveColumns() {
+  const cols = [];
+  const keysSeen = new Set();
+
+  // Find all players matching current map filter
+  const relevantPlayers = players.filter(p => {
+   //  โค้ดที่ถูกต้อง
+const rawMapName = KNOWN_MAPS[p.placeId] || p.placeName || p.placeId || "Unknown Map";
+    const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
+    return !currentMapFilter || mapName === currentMapFilter;
+  });
+
+  // Collect all unique keys in `units` across these players
+  relevantPlayers.forEach(p => {
+    if (p.units) {
+      Object.keys(p.units).forEach(key => {
+        if (!keysSeen.has(key)) {
+          keysSeen.add(key);
+          const val = p.units[key];
+          const isTextVal = typeof val === "string";
+          // Custom getter for Cinema count
+          let getter = null;
+          if (key === "Cinema") {
+            getter = (u) => cinemaCount(u);
+          }
+          cols.push({
+            key: key,
+            label: key,
+            sortKey: key.toLowerCase(),
+            isText: isTextVal,
+            getter: getter
+          });
+        }
+      });
+    }
+  });
+
+  // Sort columns: numeric metrics first, then text attributes (like Class), alphabetically
+  cols.sort((a, b) => {
+    if (a.isText && !b.isText) return 1;
+    if (!a.isText && b.isText) return -1;
+    return a.key.localeCompare(b.key);
+  });
+
+  return cols;
+}
+
+// ── Helper: Update sort dropdown based on active columns ─────────────────────
+function updateSortOptions() {
+  if (!sortSelect) return;
+  const cols = getActiveColumns();
+  const currentValue = sortSelect.value;
+
+  // Keep coins and updated, then add column-specific sorts
+  const baseOptions = [
+    { value: "coins", label: "เหรียญ (Coins - สูงสุด)" },
+    { value: "updated", label: "อัปเดตล่าสุด (Last Update)" },
+  ];
+
+  const colOptions = cols
+    .filter(c => c.sortKey)
+    .map(c => ({ value: c.sortKey, label: `${c.label} (สูงสุด)` }));
+
+  const allOptions = [...baseOptions, ...colOptions];
+
+  sortSelect.innerHTML = allOptions.map(opt =>
+    `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`
+  ).join("");
+
+  // Try to restore previous selection
+  if (allOptions.some(o => o.value === currentValue)) {
+    sortSelect.value = currentValue;
+  } else {
+    sortSelect.value = "coins";
+  }
+}
+
 // ── Render Main Roster Table ──────────────────────────────────────────────────
 function render() {
   const query = searchInput?.value.trim().toLowerCase() || "";
+  const cols = getActiveColumns();
+  const colSpan = 4 + cols.length; // Account + Coins + cols + Status + Update + Action
+
+  // Update sort dropdown for current map view
+  updateSortOptions();
+
+  // Update table headers dynamically
+  const thead = document.querySelector(".roster-table thead tr");
+  if (thead) {
+    const colHeaders = cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join("");
+    thead.innerHTML = `
+      <th>บัญชีผู้ใช้ (Account)</th>
+      <th>Coins (เหรียญ)</th>
+      ${colHeaders}
+      <th>สถานะ (Status)</th>
+      <th>อัปเดตล่าสุด (Last Update)</th>
+      <th>จัดการ (Action)</th>
+    `;
+  }
 
   // Filter players by Search query AND selected Sidebar Map Filter
   const filtered = sortedPlayers(players).filter((p) => {
@@ -290,10 +418,7 @@ function render() {
 
   const online = players.filter(isOnline).length;
   const totalCoins = players.reduce((s, p) => s + Number(p.coins || 0), 0);
-  const totalUnits = players.reduce((s, p) => {
-    const u = p.units || {};
-    return s + Number(u.UTC || 0) + Number(u.UTS || 0) + cinemaCount(u);
-  }, 0);
+  const totalUnits = players.reduce((s, p) => s + sumAllUnits(p.units), 0);
 
   // Update Counters
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
@@ -306,7 +431,7 @@ function render() {
   }
 
   if (!filtered.length) {
-    rowsEl.innerHTML = `<tr><td colspan="8" class="empty-table-state">ยังไม่มีข้อมูลบัญชีในแผนที่นี้ — กรุณารัน Script ใน Roblox ก่อนนะ</td></tr>`;
+    rowsEl.innerHTML = `<tr><td colspan="${colSpan}" class="empty-table-state">ยังไม่มีข้อมูลบัญชีในแผนที่นี้ — กรุณารัน Script ใน Roblox ก่อนนะ</td></tr>`;
     return;
   }
 
@@ -316,8 +441,17 @@ function render() {
     const isPOnline = isOnline(p);
     const statusCls = isPOnline ? "online" : "offline";
     const statusText = escapeHtml(p.status || (isPOnline ? "Active" : "Offline"));
-    const cinemaValue = cinemaCount(u);
     const avatarUrl = avatarCache[p.userId] || "";
+
+    // Build column cells dynamically
+    const colCells = cols.map(c => {
+      if (c.isText) {
+        const val = u[c.key] || "—";
+        return `<td><span class="metric-text ${c.key.toLowerCase()}-metric">${escapeHtml(String(val))}</span></td>`;
+      }
+      const val = c.getter ? c.getter(u) : Number(u[c.key] || 0);
+      return `<td><span class="metric-number ${c.key.toLowerCase()}-metric">${formatNumber(val)}</span></td>`;
+    }).join("");
 
     return `
       <tr>
@@ -335,9 +469,7 @@ function render() {
           </div>
         </td>
         <td><span class="metric-number coin-metric">${formatNumber(p.coins)}</span></td>
-        <td><span class="metric-number utc-metric">${formatNumber(u.UTC)}</span></td>
-        <td><span class="metric-number uts-metric">${formatNumber(u.UTS)}</span></td>
-        <td><span class="metric-number cinema-metric">${formatNumber(cinemaValue)}</span></td>
+        ${colCells}
         <td>
           <span class="status-pill ${statusCls}">
             <span class="status-dot"></span>

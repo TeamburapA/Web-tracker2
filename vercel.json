@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/roblox/update", "destination": "/api/roblox-update" },
     { "source": "/update", "destination": "/api" },
     { "source": "/api/config", "destination": "/api" },
     { "source": "/api/me", "destination": "/api" },
