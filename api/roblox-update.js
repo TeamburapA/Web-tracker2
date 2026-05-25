@@ -53,9 +53,11 @@ function getSupabase() {
 // Maps & Places Cache
 // ────────────────────────────────────────────
 const KNOWN_MAPS = {
-  "93712201161812": "LEGACY | Lobby",
+  "93712201161812": "[LEGACY] Toilet Tower Defense",
   "13775256536": "[LEGACY] Toilet Tower Defense",
+  "11654637731": "[LEGACY] Toilet Tower Defense",
   "114204398207377": "Survive Zombie Arena",
+  "98927955463992": "Survive Zombie Arena",
   "unknown": "Unknown Place"
 };
 
@@ -153,7 +155,7 @@ function normalizeItemId(name) {
 function normalizeInventory(inventoryRaw, playerId, placeId, nowIso) {
   if (!Array.isArray(inventoryRaw)) return [];
 
-  const rows = [];
+  const itemMap = {};
 
   for (const item of inventoryRaw) {
     const rawId = String(item.item_id || "").trim();
@@ -186,18 +188,26 @@ function normalizeInventory(inventoryRaw, playerId, placeId, nowIso) {
       continue;
     }
 
-    rows.push({
-      player_id:  playerId,
-      place_id:   placeId,
-      item_id:    itemId,
-      item_name:  itemName,
-      amount,
-      text_value,
-      updated_at: nowIso,
-    });
+    if (!itemMap[itemId]) {
+      itemMap[itemId] = {
+        player_id:  playerId,
+        place_id:   placeId,
+        item_id:    itemId,
+        item_name:  itemName,
+        amount,
+        text_value,
+        updated_at: nowIso,
+      };
+    } else {
+      // รวมข้อมูลที่มี itemId ซ้ำกัน (เช่น TITAN และ Cenima ที่ map ไปหา cinema เหมือนกัน)
+      itemMap[itemId].amount = Math.max(itemMap[itemId].amount || 0, amount);
+      if (text_value !== null) {
+        itemMap[itemId].text_value = text_value;
+      }
+    }
   }
 
-  return rows;
+  return Object.values(itemMap);
 }
 
 // ────────────────────────────────────────────
@@ -215,13 +225,33 @@ async function upsertPlayerData(payload) {
   const userId      = String(payload.user_id || payload.userId || "").trim();
   const name        = String(payload.name || "Unknown").trim();
   const displayName = String(payload.display_name || payload.displayName || "").trim();
-  const coins       = Number(payload.coins || 0);
   const status      = String(payload.status || "Online").trim();
   const placeId     = String(payload.place_id || payload.placeId || "unknown").trim();
   const jobId       = String(payload.job_id || payload.jobId || "").trim();
 
   if (!userId) {
     throw new Error("Missing required field: user_id or userId");
+  }
+
+  // ดึงข้อมูลเหรียญเดิมในแมพนี้ เพื่อป้องกันไม่ให้ทับซ้อนเป็น 0 ตอนโหลดด่าน
+  let coins = 0;
+  const hasCoins = payload.coins !== undefined && payload.coins !== null;
+  if (hasCoins) {
+    coins = Number(payload.coins || 0);
+  } else {
+    try {
+      const { data: existingState } = await db
+        .from("player_place_state")
+        .select("coins")
+        .eq("player_id", userId)
+        .eq("place_id", placeId)
+        .maybeSingle();
+      if (existingState) {
+        coins = Number(existingState.coins || 0);
+      }
+    } catch (e) {
+      console.warn("Failed to query existing coins:", e.message);
+    }
   }
 
   // ── 2. Upsert player_profiles เพื่อรักษา schema relationships (Defensive RLS catch)
@@ -241,7 +271,7 @@ async function upsertPlayerData(payload) {
   }
 
   // ── 3. Resolve place name dynamically
-  let placeName = payload.place_name || payload.placeName;
+  let placeName = KNOWN_MAPS[placeId] || payload.place_name || payload.placeName;
   if (!placeName || placeName === placeId || !isNaN(placeName)) {
     if (placeNameCache[placeId]) {
       placeName = placeNameCache[placeId];

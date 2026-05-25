@@ -3,9 +3,10 @@ const { createClient } = require("@supabase/supabase-js");
 
 // Re-implement the exact logic from server.js
 const KNOWN_MAPS = {
-  "93712201161812": "LEGACY | Lobby",
+  "93712201161812": "[LEGACY] Toilet Tower Defense",
   "13775256536": "[LEGACY] Toilet Tower Defense",
   "114204398207377": "Survive Zombie Arena",
+  "98927955463992": "Survive Zombie Arena",
   "unknown": "Unknown Place"
 };
 

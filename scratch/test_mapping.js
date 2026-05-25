@@ -14,7 +14,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABA
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const KNOWN_MAPS = {
-  "93712201161812": "LEGACY | Lobby",
+  "93712201161812": "[LEGACY] Toilet Tower Defense",
   "13775256536": "[LEGACY] Toilet Tower Defense",
   "unknown": "Unknown Place"
 };

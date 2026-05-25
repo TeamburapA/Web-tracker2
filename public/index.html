@@ -12,9 +12,7 @@
 <body>
   <div class="app-container">
 
-    <!-- ═══════════ SIDEBAR (LEFT TABS) ═══════════ -->
     <aside class="sidebar">
-      <!-- Sidebar Header -->
       <div class="sidebar-header">
         <span class="logo-icon">🐥</span>
         <div class="logo-text">
@@ -23,19 +21,13 @@
         </div>
       </div>
 
-      <!-- Map Tabs Navigation -->
       <div class="sidebar-nav">
         <div class="nav-title">Map All</div>
         <nav id="mapTabsList" class="map-tabs">
-          <button class="map-tab-btn active" data-map="all">
-            <span>All Maps</span>
-            <span class="map-tab-count" id="allMapsCount">0</span>
-          </button>
-          <!-- Dynamic map tabs will insert here -->
-        </nav>
+    
+          </nav>
       </div>
 
-      <!-- Sidebar Footer User Profile & Logout -->
       <div class="sidebar-footer">
         <div class="sidebar-user">
           <div class="user-avatar-circle" id="userAvatarInitials">U</div>
@@ -51,9 +43,7 @@
       </div>
     </aside>
 
-    <!-- ═══════════ MAIN CONTENT AREA (RIGHT) ═══════════ -->
     <main class="main-content">
-      <!-- Main Header Row -->
       <header class="main-header">
         <div class="welcome-section">
           <h2>แผงควบคุมระบบ / Dashboard</h2>
@@ -61,21 +51,17 @@
         </div>
       </header>
 
-      <!-- Stats Grid & Script Key Card -->
       <section class="top-layout">
-        <!-- Stat: Online Roblox Accounts -->
         <div class="stat-card">
           <div class="stat-label">บัญชีออนไลน์ (Online)</div>
           <div class="stat-value" id="onlineCount">0</div>
         </div>
 
-        <!-- Stat: Total Linked Roblox Accounts -->
         <div class="stat-card">
           <div class="stat-label">บัญชีทั้งหมด (Total)</div>
           <div class="stat-value" id="accountsCount">0</div>
         </div>
 
-        <!-- Script Key Control Card -->
         <div class="key-dashboard-card">
           <div class="key-card-header">
             <span class="key-title">Script Key สำหรับนำไปรัน</span>
@@ -83,18 +69,15 @@
           </div>
           
           <div class="key-actions-row">
-            <!-- Box display key -->
             <div class="key-display-box">
               <code id="scriptKeyValue">กำลังโหลด...</code>
             </div>
             
-            <!-- Copy Raw Key -->
             <button type="button" id="scriptKeyCopyBtn" class="btn-key-action" title="คัดลอกเฉพาะรหัส Key">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               คัดลอก Key
             </button>
             
-            <!-- Copy Full Lua Script -->
             <button type="button" id="copyAllBtn" class="btn-key-action btn-key-action-primary" title="คัดลอกสคริปต์ Roblox สำหรับรัน">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
               คัดลอก Script
@@ -103,7 +86,6 @@
         </div>
       </section>
 
-      <!-- Linked Roblox Accounts Badge Section -->
       <section class="linked-accounts-container">
         <div class="linked-header">
           <div class="linked-title">
@@ -117,9 +99,7 @@
         </div>
       </section>
 
-      <!-- Live Roster Table & Search/Filter Controls -->
       <section class="table-section">
-        <!-- Controls Header -->
         <div class="table-controls">
           <div class="table-title-group">
             <h3>แถบข้อมูลการทำงานบัญชีทั้งหมด</h3>
@@ -127,13 +107,11 @@
           </div>
           
           <div class="controls-right">
-            <!-- Search field -->
             <div class="search-wrapper">
               <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="12.2" x2="16.65" y2="12.2"></line><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               <input id="searchInput" type="search" class="search-input" placeholder="ค้นหาบัญชี หรือ Roblox ID..." />
             </div>
             
-            <!-- Sort dropdown -->
             <select id="sortSelect" class="sort-select">
               <option value="coins">เหรียญ (Coins - สูงสุด)</option>
               <option value="updated">อัปเดตล่าสุด (Last Update)</option>
@@ -142,26 +120,20 @@
               <option value="cinema">Cinema (สูงสุด)</option>
             </select>
             
-            <!-- Hidden copy mirror button to maintain legacy click bindings if any -->
             <button type="button" id="copyScriptBtnMirror" style="display: none;"></button>
             
-            <!-- Refresh button -->
             <button type="button" id="refreshBtn" class="btn-refresh-dashboard" title="รีเฟรชข้อมูล">
               <svg class="refresh-spin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
             </button>
           </div>
         </div>
 
-        <!-- Table Wrapper -->
         <div class="table-wrapper">
           <table class="roster-table">
             <thead>
               <tr>
                 <th>บัญชีผู้ใช้ (Account)</th>
                 <th>Coins (เหรียญ)</th>
-                <th>UTC</th>
-                <th>UTS</th>
-                <th>Cinema</th>
                 <th>สถานะ (Status)</th>
                 <th>อัปเดตล่าสุด (Last Update)</th>
                 <th>จัดการ (Action)</th>
@@ -169,14 +141,13 @@
             </thead>
             <tbody id="playerRows">
               <tr>
-                <td colspan="8" class="empty-table-state">กำลังดึงข้อมูลบัญชี Roblox...</td>
+                <td colspan="5" class="empty-table-state">กำลังดึงข้อมูลบัญชี Roblox...</td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- Stats Summaries Banner (Bottom row info items) -->
       <footer style="margin-top: 20px; display: flex; gap: 20px; justify-content: flex-end; font-size: 12px; color: var(--text-muted);">
         <div>เหรียญรวมทั้งหมด: <strong id="totalCoins" style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">0</strong></div>
         <div>ยูนิตรวมทั้งหมด: <strong id="totalUnits" style="color: #9b8cfa; font-family: 'JetBrains Mono', monospace;">0</strong></div>
@@ -184,17 +155,14 @@
     </main>
   </div>
 
-  <!-- Toast notification system -->
   <div id="copyToast" class="copy-toast" style="display: none;">คัดลอกสำเร็จ ✓</div>
 
-  <!-- Legacy mirror button listener -->
   <script>
     document.getElementById("copyScriptBtnMirror")?.addEventListener("click", () => {
       document.getElementById("copyAllBtn")?.click();
     });
   </script>
 
-  <!-- Application scripts -->
   <script type="module" src="/js/app.js"></script>
 </body>
 

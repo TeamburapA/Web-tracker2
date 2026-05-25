@@ -4,7 +4,7 @@ _G.ConfigGame = {
     Dashboard = {
         Enable = true,
         Url = "https://web-tracker2.vercel.app/roblox/update",
-        Key = "a49969d795ad4e0fbc2962042230e0c8",
+        Key = "เอา_script_key_จากหน้าเว็บมาใส่ตรงนี้",
         Interval = 5,
     },
 }
@@ -23,14 +23,14 @@ local function getCoins()
     local coins = stats and stats:FindFirstChild("Coins")
 
     if not coins then
-        return 0
+        return nil
     end
 
     return tonumber(coins.Value) or 0
 end
 
 -- ฟังก์ชันหลักในการส่งข้อมูลไปยัง Dashboard หลังบ้าน
-local function SendDashboardUpdate(statusText, itemsArray)
+local function SendDashboardUpdate(statusText, itemsArray, flatItems)
     local cfg = _G.ConfigGame and _G.ConfigGame.Dashboard
     if not cfg or not cfg.Enable then return end
     if not cfg.Url or cfg.Url == "" then return end
@@ -57,21 +57,34 @@ local function SendDashboardUpdate(statusText, itemsArray)
         placeName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
     end)
 
-    -- โครงสร้าง JSON แบบยืดหยุ่นสูงสุด ส่งข้อมูลพื้นฐานพร้อมอาร์เรย์ของไอเท็มเฉพาะแมพ
-    local body = HttpService:JSONEncode({
+    -- โครงสร้าง payload หลัก
+    local payload = {
         key = cfg.Key,
         script_key = cfg.Key,
         userId = player.UserId,
         name = player.Name,
         displayName = player.DisplayName,
-        coins = getCoins(),
         status = statusText or "Online",
         placeId = game.PlaceId,
         placeName = placeName,
         jobId = game.JobId,
         inventory = itemsArray or {},
         items = itemsArray or {} -- ส่งเป็น Array ลิสต์ไอเท็มไปให้หลังบ้านวนลูปเซฟลง player_inventory
-    })
+    }
+
+    local coinsVal = getCoins()
+    if coinsVal ~= nil then
+        payload.coins = coinsVal
+    end
+
+    -- รวมข้อมูลไอเท็มแบบแบนราบลงใน payload เพื่อรองรับ /update endpoint
+    if flatItems then
+        for k, v in pairs(flatItems) do
+            payload[k] = v
+        end
+    end
+
+    local body = HttpService:JSONEncode(payload)
 
     task.spawn(function()
         local ok, result = pcall(function()
@@ -97,23 +110,29 @@ end
 -- ลูปทำงานหลัก (ตรวจสอบไอเท็มตามแมพทุกๆ 1 วินาที)
 while task.wait(1) do
     local currentPlaceId = game.PlaceId
-    local itemsToSend = {} -- ตารางสำหรับเก็บข้อมูลที่จะแปลงเป็น Dynamic Array ส่งไปหลังบ้าน
+    local itemsToSend = {} -- สำหรับ /roblox/update
+    local flatItems = {}  -- สำหรับ /update
 
     -- ═════════════════════════════════════════════════════════════
-    -- แมพที่ 1: Toilet Tower Defense (PlaceId: 13775256536)
+    -- แมพที่ 1: Toilet Tower Defense (PlaceId: 13775256536 / 11654637731)
     -- ═════════════════════════════════════════════════════════════
-    if currentPlaceId == 13775256536 or currentPlaceId == 11654637731 then
+   if currentPlaceId == 13775256536 
+    or currentPlaceId == 11654637731 
+    or currentPlaceId == 14264219661 
+    or currentPlaceId == 93712201161812 
+    or currentPlaceId == 131703399727686 then
         local UTC = 0
         local UTS = 0
         local TITAN = 0
         local Cenima = 0
-
+        local foundUnits = false
         pcall(function()
             local lobby = player.PlayerGui:FindFirstChild("Lobby")
             local unitFrame = lobby and lobby:FindFirstChild("UnitFrame")
             local unitList = unitFrame and unitFrame:FindFirstChild("UnitList")
 
             if unitList then
+                foundUnits = true
                 for _, row in pairs(unitList:GetChildren()) do
                     if string.sub(row.Name, 1, 3) == "Row" then
                         for _, desc in pairs(row:GetDescendants()) do
@@ -146,35 +165,52 @@ while task.wait(1) do
             end
         end)
 
-        -- จัดรูปแบบข้อมูล TTD ยัดใส่ Array (ระบุชื่อ item_id ให้ตรงกับที่คุณต้องการนำไปคิวรีหน้าเว็บ)
-        table.insert(itemsToSend, { item_id = "UTC", amount = UTC })
-        table.insert(itemsToSend, { item_id = "UTS", amount = UTS })
-        table.insert(itemsToSend, { item_id = "TITAN", amount = TITAN })
-        table.insert(itemsToSend, { item_id = "Cenima", amount = Cenima })
+        if foundUnits then
+            table.insert(itemsToSend, { item_id = "UTC", amount = UTC })
+            table.insert(itemsToSend, { item_id = "UTS", amount = UTS })
+            table.insert(itemsToSend, { item_id = "TITAN", amount = TITAN })
+            table.insert(itemsToSend, { item_id = "Cenima", amount = Cenima })
+
+            flatItems.UTC = UTC
+            flatItems.UTS = UTS
+            flatItems.TITAN = TITAN
+            flatItems.Cenima = Cenima
+        end
 
     -- ═════════════════════════════════════════════════════════════
-    -- แมพที่ 2: Survive Zombie Arena (PlaceId: 114204398207377)
+    -- แมพที่ 2: Survive Zombie Arena (PlaceId: 114204398207377 / 98927955463992)
     -- ═════════════════════════════════════════════════════════════
-    elseif currentPlaceId == 114204398207377 then
+    elseif currentPlaceId == 114204398207377 or currentPlaceId == 98927955463992 then
         local Credits = 0
         local VoidShards = 0
         local Class = "None"
+        local statsLoaded = false
 
         pcall(function()
-            Credits = tonumber(player:FindFirstChild("Credits") and player.Credits.Value) or 0
-            VoidShards = tonumber(player:FindFirstChild("VoidShards") and player.VoidShards.Value) or 0
-            Class = player:FindFirstChild("SelectedClass") and player.SelectedClass.Value or "None"
+            local creds = player:FindFirstChild("Credits")
+            local shards = player:FindFirstChild("VoidShards")
+            local cls = player:FindFirstChild("SelectedClass")
+            if creds and shards and cls then
+                Credits = tonumber(creds.Value) or 0
+                VoidShards = tonumber(shards.Value) or 0
+                Class = cls.Value or "None"
+                statsLoaded = true
+            end
         end)
 
-        -- จัดรูปแบบข้อมูลแมพซอมบี้ ยัดใส่ Array
-        -- (ถ้าค่าเป็นตัวเลขให้ส่งช่อง amount ถ้าเป็นข้อความให้ส่งช่อง text_value เพื่อให้สอดคล้องกับตาราง player_inventory)
-        table.insert(itemsToSend, { item_id = "Credits", amount = Credits })
-        table.insert(itemsToSend, { item_id = "VoidShards", amount = VoidShards })
-        table.insert(itemsToSend, { item_id = "SelectedClass", text_value = Class })
+        if statsLoaded then
+            table.insert(itemsToSend, { item_id = "Credits", amount = Credits })
+            table.insert(itemsToSend, { item_id = "VoidShards", amount = VoidShards })
+            table.insert(itemsToSend, { item_id = "SelectedClass", text_value = Class })
+
+            flatItems.Credits = Credits
+            flatItems.VoidShards = VoidShards
+            flatItems.Class = Class
+        end
     end
 
     -- ส่งข้อมูลไปอัปเดตที่ Dashboard หลังบ้าน
-    SendDashboardUpdate("Online", itemsToSend)
+    SendDashboardUpdate("Online", itemsToSend, flatItems)
 
     -- พิมพ์ Log เพื่อตรวจสอบการทำงานในหน้าจอ F9 Console ของเกม
     print("Sent Dynamic Dashboard Data successfully! Items sent count: " .. #itemsToSend)

@@ -6,22 +6,23 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABA
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function run() {
-  console.log("Checking player inventory for place ID 93712201161812...");
+  console.log("Checking all inventory for player 10971894488...");
   const { data: inv, error: err1 } = await supabase
     .from("player_inventory")
     .select("*")
-    .eq("place_id", "93712201161812");
+    .eq("player_id", "10971894488");
 
-  console.log("Inventory entries on place 93712201161812:", inv);
-  if (err1) console.error("Error querying inventory:", err1);
+  console.log("Inventory entries:", inv);
+  if (err1) console.error("Error:", err1);
 
-  const { data: players, error: err2 } = await supabase
+  console.log("Checking players table entry for 10971894488...");
+  const { data: player, error: err2 } = await supabase
     .from("players")
     .select("*")
-    .eq("place_id", "93712201161812");
+    .eq("user_id", "10971894488");
 
-  console.log("Players on place 93712201161812:", players);
-  if (err2) console.error("Error querying players:", err2);
+  console.log("Players entry:", player);
+  if (err2) console.error("Error:", err2);
 }
 
 run().catch(console.error);

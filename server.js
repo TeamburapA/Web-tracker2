@@ -8,9 +8,11 @@ const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const KNOWN_MAPS = {
-  "93712201161812": "LEGACY | Lobby",
+  "93712201161812": "[LEGACY] Toilet Tower Defense",
   "13775256536": "[LEGACY] Toilet Tower Defense",
+  "11654637731": "[LEGACY] Toilet Tower Defense",
   "114204398207377": "Survive Zombie Arena",
+  "98927955463992": "Survive Zombie Arena",
   "unknown": "Unknown Place"
 };
 
@@ -269,16 +271,30 @@ async function getPlayersFromInventory(robloxIds) {
 
   const db = getSupabase();
 
-  // 1. ดึงข้อมูลจากตารางผู้เล่นหลัก
-  const { data: players, error: pErr } = await db
-    .from("players")
-    .select("*")
-    .in("user_id", robloxIds);
+  // 1. ดึงข้อมูลโปรไฟล์ผู้เล่นหลัก
+  const { data: profiles, error: profErr } = await db
+    .from("player_profiles")
+    .select("player_id, username, display_name")
+    .in("player_id", robloxIds);
 
-  if (pErr) throw pErr;
-  if (!players || players.length === 0) return [];
+  if (profErr) throw profErr;
+  if (!profiles || profiles.length === 0) return [];
 
-  // 2. 🔥 ดึงข้อมูลไอเท็มทั้งหมดจากตารางใหม่ (player_inventory) มาเชื่อมโยง
+  // ทำ Map สำหรับค้นหาโปรไฟล์อย่างรวดเร็ว
+  const profileMap = {};
+  profiles.forEach(p => {
+    profileMap[p.player_id] = p;
+  });
+
+  // 2. ดึงข้อมูลสถานะตามแต่ละแมพที่ผู้เล่นเคยรัน (player_place_state)
+  const { data: states, error: stateErr } = await db
+    .from("player_place_state")
+    .select("player_id, place_id, job_id, status, coins, updated_at")
+    .in("player_id", robloxIds);
+
+  if (stateErr) throw stateErr;
+
+  // 3. ดึงข้อมูลไอเท็มทั้งหมดในคลัง (player_inventory)
   const { data: invItems, error: invErr } = await db
     .from("player_inventory")
     .select("*")
@@ -286,8 +302,8 @@ async function getPlayersFromInventory(robloxIds) {
 
   if (invErr) throw invErr;
 
-  // 3. ดึงข้อมูลชื่อแมพจากตาราง game_places
-  const placeIds = [...new Set(players.map(p => p.place_id).filter(Boolean))];
+  // 4. ดึงชื่อแมพจากตาราง game_places
+  const placeIds = [...new Set((states || []).map(s => s.place_id).filter(Boolean))];
   let placeNameById = {};
   if (placeIds.length) {
     const { data: places } = await db
@@ -299,18 +315,42 @@ async function getPlayersFromInventory(robloxIds) {
     }
   }
 
-  // 4. ประกอบร่างจัดกลุ่มไอเท็มยัดลงกล่อง units ให้เข้าล็อกกับหน้าบ้าน app.js อัตโนมัติ
-  return players.map(p => {
+  // ตัวช่วยหาชื่อแมพแบบ Canonical
+  function resolveMapName(placeId) {
+    const rawPlaceName = placeNameById[placeId] || placeId;
+    return KNOWN_MAPS[placeId] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
+  }
+
+  // 5. ประกอบร่างข้อมูลเป็น 1 รายการต่อ 1 ไอดีผู้เล่น (รวมหน่วยและยึดสถานะอัปเดตล่าสุด)
+  return robloxIds.map(robloxId => {
+    const pProfile = profileMap[robloxId];
+    if (!pProfile) return null;
+
+    const pStates = (states || []).filter(s => s.player_id === robloxId);
+    if (pStates.length === 0) return null;
+
+    // หาด่านล่าสุดที่รันอยู่
+    pStates.sort((a, b) => {
+      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    const latestState = pStates[0];
+
+    // รวบรวมไอเท็มทั้งหมดของไอดีนี้ข้ามทุกแมพ
+    const pItems = (invItems || []).filter(item => item.player_id === robloxId);
+    
+    // เรียงไอเท็มเก่าไปใหม่เพื่อให้ตัวอัปเดตล่าสุดเขียนทับ
+    pItems.sort((a, b) => {
+      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return timeA - timeB;
+    });
+
     const units = {};
-
-    // กรองหาไอเท็มเฉพาะของผู้เล่นคนนี้และแมพนี้
-    const pItems = (invItems || []).filter(item => item.player_id === p.user_id && item.place_id === p.place_id);
-
     pItems.forEach(item => {
-      // แปลงไอดีไอเท็มเป็นชื่อไอเท็มแบบ canonical (เช่น class -> Class)
       const displayName = itemNameFromId(item.item_id);
-      
-      // ถ้ามีค่าข้อความ (เช่น Class) ให้ใช้ text_value ถ้าไม่มีให้ดึงจำนวนเลข amount
       if (item.text_value !== null && item.text_value !== undefined && item.text_value !== "") {
         units[displayName] = item.text_value;
       } else {
@@ -318,24 +358,23 @@ async function getPlayersFromInventory(robloxIds) {
       }
     });
 
-    const rawPlaceName = placeNameById[p.place_id] || p.place_id;
-    const placeName = KNOWN_MAPS[p.place_id] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
+    const mapName = resolveMapName(latestState.place_id);
 
     return {
-      id: p.user_id,
-      userId: p.user_id,
-      name: p.name,
-      displayName: p.display_name,
-      coins: Number(p.coins || 0),
-      status: p.status,
-      placeId: p.place_id,
-      placeName: placeName,
-      jobId: p.job_id || "",
+      id: robloxId,
+      userId: robloxId,
+      name: pProfile.username,
+      displayName: pProfile.display_name,
+      coins: Number(latestState.coins || 0),
+      status: latestState.status,
+      placeId: latestState.place_id,
+      placeName: mapName,
+      jobId: latestState.job_id || "",
       units: normalizeUnitsObject(units),
-      firstSeenAt: p.updated_at ? new Date(p.updated_at).getTime() : 0,
-      updatedAt: p.updated_at ? new Date(p.updated_at).getTime() : 0,
+      firstSeenAt: latestState.updated_at ? new Date(latestState.updated_at).getTime() : 0,
+      updatedAt: latestState.updated_at ? new Date(latestState.updated_at).getTime() : 0,
     };
-  });
+  }).filter(Boolean);
 }
 
 async function getPlayersByUserId(userId) {
@@ -374,11 +413,21 @@ async function getPlayersByUserId(userId) {
     }
   }
 
-  // รวมข้อมูลและเรียงลำดับตามเวลาอัปเดตล่าสุด
+  // รวมข้อมูลและสรุปเหลือ 1 แถวต่อ 1 บัญชีผู้เล่น
   const combined = [...fromInventory, ...fromView];
-  combined.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  
+  const merged = {};
+  combined.forEach(p => {
+    const key = String(p.userId);
+    if (!merged[key] || (p.updatedAt || 0) > (merged[key].updatedAt || 0)) {
+      merged[key] = p;
+    }
+  });
 
-  return combined;
+  const finalPlayers = Object.values(merged);
+  finalPlayers.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  return finalPlayers;
 }
 
 async function upsertPlayer(player) {
@@ -398,7 +447,7 @@ async function upsertPlayer(player) {
   );
   if (result.error) throw new Error(result.error.message);
 
-  let placeName = player.placeName;
+  let placeName = KNOWN_MAPS[placeId] || player.placeName;
   if (!placeName || placeName === placeId || !isNaN(placeName)) {
     if (placeNameCache[placeId]) {
       placeName = placeNameCache[placeId];

@@ -4,11 +4,37 @@
 import { getToken, logout, initGuard, clearSession } from "./auth.js";
 
 const KNOWN_MAPS = {
-  "93712201161812": "LEGACY | Lobby",
+  "93712201161812": "[LEGACY] Toilet Tower Defense",
   "13775256536": "[LEGACY] Toilet Tower Defense",
+  "11654637731": "[LEGACY] Toilet Tower Defense",
   "114204398207377": "Survive Zombie Arena",
   "unknown": "Unknown Place"
 };
+
+const MAP_COLUMNS = {
+  "Survive Zombie Arena": [
+    { key: "Credits", label: "Credits", sortKey: "credits" },
+    { key: "VoidShards", label: "VoidShards", sortKey: "voidshards" },
+    { key: "Class", label: "Class", sortKey: "class", isText: true }
+  ],
+  "[LEGACY] Toilet Tower Defense": [
+    { key: "UTC", label: "UTC", sortKey: "utc" },
+    { key: "UTS", label: "UTS", sortKey: "uts" },
+    { key: "Cinema", label: "Cinema", sortKey: "cinema", getter: (u) => cinemaCount(u) }
+  ]
+};
+
+function getMapName(p) {
+  const placeId = String(p.placeId || "unknown");
+  if (KNOWN_MAPS[placeId]) {
+    return KNOWN_MAPS[placeId];
+  }
+  const placeName = p.placeName || p.place_name || "";
+  if (placeName && isNaN(placeName) && placeName !== "unknown") {
+    return placeName;
+  }
+  return KNOWN_MAPS["unknown"] || "Unknown Place";
+}
 
 // Map columns are now discovered dynamically from player inventory units!
 
@@ -269,9 +295,16 @@ function renderMapTabs() {
 
   // Group players by map (placeName fallback to placeId)
   const mapCounts = {};
+
+  // Initialize known maps with 0 to ensure they always display and are clickable
+  Object.values(KNOWN_MAPS).forEach(mapName => {
+    if (mapName && mapName !== "Unknown Place") {
+      mapCounts[mapName] = 0;
+    }
+  });
+
   players.forEach(p => {
-const rawMapName = KNOWN_MAPS[p.placeId] || p.placeName || p.placeId || "Unknown Map";
-    const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
+    const mapName = getMapName(p);
     mapCounts[mapName] = (mapCounts[mapName] || 0) + 1;
   });
 
@@ -306,51 +339,20 @@ const rawMapName = KNOWN_MAPS[p.placeId] || p.placeName || p.placeId || "Unknown
   mapTabsListEl.insertAdjacentHTML('beforeend', html);
 }
 
-// ── Helper: Get active columns dynamically discovered from current players list ─
+// ── Helper: Get active columns statically defined or merged for All Maps ────────
 function getActiveColumns() {
+  if (currentMapFilter && MAP_COLUMNS[currentMapFilter]) {
+    return MAP_COLUMNS[currentMapFilter];
+  }
+  // ถ้าเป็น "All Maps" ให้รวมคอลัมน์ของทุกแมพ
   const cols = [];
-  const keysSeen = new Set();
-
-  // Find all players matching current map filter
-  const relevantPlayers = players.filter(p => {
-   //  โค้ดที่ถูกต้อง
-const rawMapName = KNOWN_MAPS[p.placeId] || p.placeName || p.placeId || "Unknown Map";
-    const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
-    return !currentMapFilter || mapName === currentMapFilter;
+  Object.values(MAP_COLUMNS).forEach(mapCols => {
+    mapCols.forEach(c => {
+      if (!cols.some(ac => ac.key === c.key)) {
+        cols.push(c);
+      }
+    });
   });
-
-  // Collect all unique keys in `units` across these players
-  relevantPlayers.forEach(p => {
-    if (p.units) {
-      Object.keys(p.units).forEach(key => {
-        if (!keysSeen.has(key)) {
-          keysSeen.add(key);
-          const val = p.units[key];
-          const isTextVal = typeof val === "string";
-          // Custom getter for Cinema count
-          let getter = null;
-          if (key === "Cinema") {
-            getter = (u) => cinemaCount(u);
-          }
-          cols.push({
-            key: key,
-            label: key,
-            sortKey: key.toLowerCase(),
-            isText: isTextVal,
-            getter: getter
-          });
-        }
-      });
-    }
-  });
-
-  // Sort columns: numeric metrics first, then text attributes (like Class), alphabetically
-  cols.sort((a, b) => {
-    if (a.isText && !b.isText) return 1;
-    if (!a.isText && b.isText) return -1;
-    return a.key.localeCompare(b.key);
-  });
-
   return cols;
 }
 
@@ -361,10 +363,11 @@ function updateSortOptions() {
   const currentValue = sortSelect.value;
 
   // Keep coins and updated, then add column-specific sorts
-  const baseOptions = [
-    { value: "coins", label: "เหรียญ (Coins - สูงสุด)" },
-    { value: "updated", label: "อัปเดตล่าสุด (Last Update)" },
-  ];
+  const baseOptions = [];
+  if (currentMapFilter !== "Survive Zombie Arena") {
+    baseOptions.push({ value: "coins", label: "เหรียญ (Coins - สูงสุด)" });
+  }
+  baseOptions.push({ value: "updated", label: "อัปเดตล่าสุด (Last Update)" });
 
   const colOptions = cols
     .filter(c => c.sortKey)
@@ -380,7 +383,7 @@ function updateSortOptions() {
   if (allOptions.some(o => o.value === currentValue)) {
     sortSelect.value = currentValue;
   } else {
-    sortSelect.value = "coins";
+    sortSelect.value = currentMapFilter === "Survive Zombie Arena" ? "updated" : "coins";
   }
 }
 
@@ -388,7 +391,8 @@ function updateSortOptions() {
 function render() {
   const query = searchInput?.value.trim().toLowerCase() || "";
   const cols = getActiveColumns();
-  const colSpan = 4 + cols.length; // Account + Coins + cols + Status + Update + Action
+  const showCoins = currentMapFilter !== "Survive Zombie Arena";
+  const colSpan = (showCoins ? 5 : 4) + cols.length; // Account + Coins (optional) + cols + Status + Update + Action
 
   // Update sort dropdown for current map view
   updateSortOptions();
@@ -399,7 +403,7 @@ function render() {
     const colHeaders = cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join("");
     thead.innerHTML = `
       <th>บัญชีผู้ใช้ (Account)</th>
-      <th>Coins (เหรียญ)</th>
+      ${showCoins ? '<th>Coins (เหรียญ)</th>' : ''}
       ${colHeaders}
       <th>สถานะ (Status)</th>
       <th>อัปเดตล่าสุด (Last Update)</th>
@@ -407,13 +411,10 @@ function render() {
     `;
   }
 
-  // Filter players by Search query AND selected Sidebar Map Filter
+  // Filter players by Search query (do not filter players list by map selection)
   const filtered = sortedPlayers(players).filter((p) => {
     const matchesSearch = `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
-    const rawMapName = p.placeName || p.placeId || "Unknown Map";
-    const mapName = KNOWN_MAPS[rawMapName] || KNOWN_MAPS[p.placeId] || rawMapName;
-    const matchesMap = !currentMapFilter || mapName === currentMapFilter;
-    return matchesSearch && matchesMap;
+    return matchesSearch;
   });
 
   const online = players.filter(isOnline).length;
@@ -422,7 +423,12 @@ function render() {
 
   // Update Counters
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
-  if (totalCoinsEl) totalCoinsEl.textContent = formatNumber(totalCoins);
+  if (totalCoinsEl) {
+    totalCoinsEl.textContent = formatNumber(totalCoins);
+    if (totalCoinsEl.parentElement) {
+      totalCoinsEl.parentElement.style.display = showCoins ? "block" : "none";
+    }
+  }
   if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
   if (tableCountLabel) {
     tableCountLabel.textContent = filtered.length
@@ -440,7 +446,7 @@ function render() {
     const u = p.units || {};
     const isPOnline = isOnline(p);
     const statusCls = isPOnline ? "online" : "offline";
-    const statusText = escapeHtml(p.status || (isPOnline ? "Active" : "Offline"));
+    const statusText = isPOnline ? escapeHtml(p.status || "Active") : "Offline";
     const avatarUrl = avatarCache[p.userId] || "";
 
     // Build column cells dynamically
@@ -464,11 +470,11 @@ function render() {
             </div>
             <div class="player-info-meta">
               <span class="player-name-main">${escapeHtml(p.displayName || p.name || "Unknown")}</span>
-              <span class="player-id-sub">@${escapeHtml(p.name)} | ID: ${escapeHtml(String(p.userId || p.id || "-"))}</span>
+              <span class="player-id-sub">@${escapeHtml(p.name)} | ID: ${escapeHtml(String(p.userId || p.id || "-"))}${p.placeName ? ' | ' + escapeHtml(p.placeName) : ''}</span>
             </div>
           </div>
         </td>
-        <td><span class="metric-number coin-metric">${formatNumber(p.coins)}</span></td>
+        ${showCoins ? `<td><span class="metric-number coin-metric">${formatNumber(p.coins)}</span></td>` : ""}
         ${colCells}
         <td>
           <span class="status-pill ${statusCls}">
