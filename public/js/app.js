@@ -411,15 +411,36 @@ function render() {
     `;
   }
 
-  // Filter players by Search query (do not filter players list by map selection)
-  const filtered = sortedPlayers(players).filter((p) => {
-    const matchesSearch = `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
-    return matchesSearch;
+  // Filter players by Search query AND selected Sidebar Map Filter
+  const filteredMapped = sortedPlayers(players).map((p) => {
+    // If there is a map filter, map the player properties to that map's state if it exists
+    if (currentMapFilter) {
+      const mState = p.mapStates && p.mapStates[currentMapFilter];
+      if (!mState) {
+        // Player has never played this map, mark matchesMap as false to hide them
+        return { ...p, matchesMap: false };
+      }
+      return {
+        ...p,
+        matchesMap: true,
+        coins: mState.coins,
+        status: mState.status,
+        updatedAt: mState.updatedAt,
+        units: mState.units
+      };
+    }
+    // For All Maps, all players match, and we use root properties
+    return { ...p, matchesMap: true };
   });
 
-  const online = players.filter(isOnline).length;
-  const totalCoins = players.reduce((s, p) => s + Number(p.coins || 0), 0);
-  const totalUnits = players.reduce((s, p) => s + sumAllUnits(p.units), 0);
+  const filtered = filteredMapped.filter((p) => {
+    const matchesSearch = `${p.userId} ${p.name} ${p.displayName}`.toLowerCase().includes(query);
+    return matchesSearch && p.matchesMap;
+  });
+
+  const online = filtered.filter(isOnline).length;
+  const totalCoins = filtered.reduce((s, p) => s + Number(p.coins || 0), 0);
+  const totalUnits = filtered.reduce((s, p) => s + sumAllUnits(p.units), 0);
 
   // Update Counters
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);

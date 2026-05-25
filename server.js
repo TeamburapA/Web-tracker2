@@ -321,7 +321,7 @@ async function getPlayersFromInventory(robloxIds) {
     return KNOWN_MAPS[placeId] || (isNaN(rawPlaceName) ? rawPlaceName : KNOWN_MAPS[rawPlaceName]) || rawPlaceName;
   }
 
-  // 5. ประกอบร่างข้อมูลเป็น 1 รายการต่อ 1 ไอดีผู้เล่น (รวมหน่วยและยึดสถานะอัปเดตล่าสุด)
+  // 5. ประกอบร่างข้อมูลแบบ 1 ID ต่อ 1 แถว พร้อมมัดรวม mapStates
   return robloxIds.map(robloxId => {
     const pProfile = profileMap[robloxId];
     if (!pProfile) return null;
@@ -329,7 +329,7 @@ async function getPlayersFromInventory(robloxIds) {
     const pStates = (states || []).filter(s => s.player_id === robloxId);
     if (pStates.length === 0) return null;
 
-    // หาด่านล่าสุดที่รันอยู่
+    // หาด่านล่าสุดที่ผู้เล่น active เพื่อใช้เป็นข้อมูลหลัก (root)
     pStates.sort((a, b) => {
       const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
       const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
@@ -337,28 +337,44 @@ async function getPlayersFromInventory(robloxIds) {
     });
 
     const latestState = pStates[0];
+    const mapName = resolveMapName(latestState.place_id);
 
-    // รวบรวมไอเท็มทั้งหมดของไอดีนี้ข้ามทุกแมพ
-    const pItems = (invItems || []).filter(item => item.player_id === robloxId);
-    
-    // เรียงไอเท็มเก่าไปใหม่เพื่อให้ตัวอัปเดตล่าสุดเขียนทับ
-    pItems.sort((a, b) => {
-      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-      return timeA - timeB;
-    });
+    // สร้าง mapStates เก็บประวัติแยกแต่ละแมพ
+    const mapStates = {};
 
-    const units = {};
-    pItems.forEach(item => {
-      const displayName = itemNameFromId(item.item_id);
-      if (item.text_value !== null && item.text_value !== undefined && item.text_value !== "") {
-        units[displayName] = item.text_value;
-      } else {
-        units[displayName] = Number(item.amount || 0);
+    pStates.forEach(s => {
+      const mName = resolveMapName(s.place_id);
+      
+      // ถ้าไม่มีคีย์แมพนี้ หรือสถานะนี้ใหม่กว่าที่มีอยู่ ให้เพิ่มข้อมูล
+      if (!mapStates[mName] || new Date(s.updated_at).getTime() > mapStates[mName].updatedAt) {
+        // ดึงไอเท็มทั้งหมดในแมพหลักเดียวกัน (รองรับการแชร์ Lobby กับ Game)
+        const mapPlaceIds = new Set(pStates.filter(ps => resolveMapName(ps.place_id) === mName).map(ps => ps.place_id));
+        const pItems = (invItems || []).filter(item => item.player_id === robloxId && mapPlaceIds.has(item.place_id));
+
+        pItems.sort((a, b) => {
+          const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return timeA - timeB;
+        });
+
+        const units = {};
+        pItems.forEach(item => {
+          const displayName = itemNameFromId(item.item_id);
+          if (item.text_value !== null && item.text_value !== undefined && item.text_value !== "") {
+            units[displayName] = item.text_value;
+          } else {
+            units[displayName] = Number(item.amount || 0);
+          }
+        });
+
+        mapStates[mName] = {
+          coins: Number(s.coins || 0),
+          status: s.status,
+          updatedAt: new Date(s.updated_at).getTime(),
+          units: normalizeUnitsObject(units)
+        };
       }
     });
-
-    const mapName = resolveMapName(latestState.place_id);
 
     return {
       id: robloxId,
@@ -370,9 +386,8 @@ async function getPlayersFromInventory(robloxIds) {
       placeId: latestState.place_id,
       placeName: mapName,
       jobId: latestState.job_id || "",
-      units: normalizeUnitsObject(units),
-      firstSeenAt: latestState.updated_at ? new Date(latestState.updated_at).getTime() : 0,
-      updatedAt: latestState.updated_at ? new Date(latestState.updated_at).getTime() : 0,
+      updatedAt: new Date(latestState.updated_at).getTime(),
+      mapStates: mapStates
     };
   }).filter(Boolean);
 }
@@ -413,14 +428,53 @@ async function getPlayersByUserId(userId) {
     }
   }
 
-  // รวมข้อมูลและสรุปเหลือ 1 แถวต่อ 1 บัญชีผู้เล่น
+  // รวมข้อมูลทั้งหมดเข้าด้วยกัน
   const combined = [...fromInventory, ...fromView];
   
   const merged = {};
-  combined.forEach(p => {
+  
+  // โหลดจาก Inventory ก่อน (ซึ่งมีโครงสร้าง mapStates อยู่แล้ว)
+  fromInventory.forEach(p => {
+    merged[p.userId] = p;
+  });
+
+  // โหลดจาก View แล้วผสมเข้าด้วยกัน
+  fromView.forEach(p => {
     const key = String(p.userId);
-    if (!merged[key] || (p.updatedAt || 0) > (merged[key].updatedAt || 0)) {
-      merged[key] = p;
+    if (!merged[key]) {
+      merged[key] = {
+        id: p.userId,
+        userId: p.userId,
+        name: p.name,
+        displayName: p.displayName,
+        coins: p.coins,
+        status: p.status,
+        placeId: p.placeId,
+        placeName: p.placeName,
+        jobId: p.jobId || "",
+        updatedAt: p.updatedAt,
+        mapStates: {}
+      };
+    }
+
+    const mapName = p.placeName || p.placeId;
+    if (!merged[key].mapStates[mapName] || p.updatedAt > merged[key].mapStates[mapName].updatedAt) {
+      merged[key].mapStates[mapName] = {
+        coins: p.coins,
+        status: p.status,
+        updatedAt: p.updatedAt,
+        units: p.units || {}
+      };
+    }
+
+    // ถ้าพบว่า view row นี้เป็นข้อมูลที่อัปเดตล่าสุดของคนนี้ ให้เซ็ตเป็นข้อมูลหลัก (root)
+    if (p.updatedAt > (merged[key].updatedAt || 0)) {
+      merged[key].coins = p.coins;
+      merged[key].status = p.status;
+      merged[key].placeId = p.placeId;
+      merged[key].placeName = p.placeName;
+      merged[key].jobId = p.jobId || "";
+      merged[key].updatedAt = p.updatedAt;
     }
   });
 
