@@ -50,12 +50,11 @@ const copyAllBtn = document.getElementById("copyAllBtn");
 const copyToast = document.getElementById("copyToast");
 const scriptKeyEl = document.getElementById("scriptKeyValue");
 const scriptKeyCopyBtn = document.getElementById("scriptKeyCopyBtn");
-const accountsListEl = document.getElementById("accountsList");
 const accountsCountEl = document.getElementById("accountsCount");
-const linkedAccountsCountBadge = document.getElementById("linkedAccountsCountBadge");
-const userEmailEl = document.getElementById("userEmail");
+const userUsernameEl = document.getElementById("userUsername");
 const userAvatarInitialsEl = document.getElementById("userAvatarInitials");
 const refreshBtn = document.getElementById("refreshBtn");
+const clearBtn = document.getElementById("clearBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const tableCountLabel = document.getElementById("tableCountLabel");
 const mapTabsListEl = document.getElementById("mapTabsList");
@@ -68,6 +67,8 @@ let currentKey = null;
 let playersTimer = null;
 let meTimer = null;
 let currentMapFilter = null; // Stores selected map name, null represents "All Maps"
+let linkedAccounts = []; // Stores user's roblox accounts
+const activityCache = {};
 
 // Roblox Headshot Cache
 const avatarCache = {};
@@ -194,6 +195,43 @@ function timeAgo(ts) {
 
 function isOnline(p) {
   return serverNow - Number(p.updatedAt || 0) < 30000;
+}
+
+function getPlayerStatus(p) {
+  const isPOnline = isOnline(p);
+  if (!isPOnline) return "offline";
+
+  const scriptStatus = String(p.status || "").toLowerCase();
+  if (scriptStatus.includes("farm")) {
+    return "farming";
+  }
+
+  // Key is based on userId and the placeId (to track per-map status)
+  const key = `${p.userId}_${p.placeId || "unknown"}`;
+  const currentCoins = Number(p.coins || 0);
+  const currentUnitsStr = JSON.stringify(p.units || {});
+
+  if (!activityCache[key]) {
+    activityCache[key] = {
+      lastCoins: currentCoins,
+      lastUnits: currentUnitsStr,
+      lastChangeTime: p.updatedAt || Date.now()
+    };
+  } else {
+    const cached = activityCache[key];
+    if (cached.lastCoins !== currentCoins || cached.lastUnits !== currentUnitsStr) {
+      cached.lastCoins = currentCoins;
+      cached.lastUnits = currentUnitsStr;
+      cached.lastChangeTime = Date.now();
+    }
+  }
+
+  const timeSinceLastChange = Date.now() - activityCache[key].lastChangeTime;
+  if (timeSinceLastChange < 120000) {
+    return "farming";
+  }
+
+  return "online";
 }
 
 function cinemaCount(u = {}) {
@@ -466,8 +504,14 @@ function render() {
   rowsEl.innerHTML = filtered.map((p) => {
     const u = p.units || {};
     const isPOnline = isOnline(p);
-    const statusCls = isPOnline ? "online" : "offline";
-    const statusText = isPOnline ? escapeHtml(p.status || "Active") : "Offline";
+    const statusVal = getPlayerStatus(p);
+    const statusCls = statusVal; // "farming", "online", or "offline"
+    let statusText = "Offline";
+    if (statusVal === "farming") {
+      statusText = "Farming";
+    } else if (statusVal === "online") {
+      statusText = escapeHtml(p.status || "Online");
+    }
     const avatarUrl = avatarCache[p.userId] || "";
 
     // Build column cells dynamically
@@ -505,15 +549,13 @@ function render() {
         </td>
         <td><span class="time-update ${!isPOnline ? 'offline' : ''}">${timeAgo(p.updatedAt || 0)}</span></td>
         <td>
-          <button class="btn-copy-roster-id" data-copy="${escapeHtml(String(p.userId || p.id || ""))}"></button>
+          <button class="btn-delete-roster-id" data-delete-id="${escapeHtml(String(p.userId || p.id || ""))}" data-delete-name="${escapeHtml(p.displayName || p.name || "")}" title="ลบไอดีออกจากระบบ">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span>ลบไอดี</span>
+          </button>
         </td>
       </tr>`;
   }).join("");
-
-  // Fix button text contents securely (to keep it neat)
-  rowsEl.querySelectorAll(".btn-copy-roster-id").forEach(btn => {
-    btn.textContent = "Copy ID";
-  });
 
   // Batch-fetch avatars in the background
   const playerIds = filtered.map(p => p.userId).filter(Boolean);
@@ -533,61 +575,7 @@ function render() {
   });
 }
 
-// ── Render Roblox Account Badges ──────────────────────────────────────────────
-function renderAccounts(accounts) {
-  if (!accountsListEl) return;
 
-  if (!accounts.length) {
-    accountsListEl.innerHTML = `<span class="accounts-empty-state">ยังไม่มี Roblox account เชื่อมโยง — รัน script ก่อนนะ</span>`;
-    if (linkedAccountsCountBadge) linkedAccountsCountBadge.textContent = "0";
-    return;
-  }
-
-  if (linkedAccountsCountBadge) linkedAccountsCountBadge.textContent = accounts.length;
-
-  accountsListEl.innerHTML = accounts.map((a) => {
-    const label = escapeHtml(a.display_name || a.roblox_username || a.roblox_user_id);
-    const sub = escapeHtml(a.roblox_username || "");
-    const lastSeen = a.last_seen_at ? new Date(a.last_seen_at).toLocaleString("th-TH") : "-";
-    const avatarUrl = avatarCache[a.roblox_user_id] || "";
-
-    return `
-      <div class="roblox-badge" title="Last seen: ${lastSeen}">
-        <div class="badge-avatar" data-badge-avatar-id="${escapeHtml(a.roblox_user_id)}">
-          ${avatarUrl && avatarUrl !== "loading" 
-            ? `<img src="${avatarUrl}" alt="${label}" />` 
-            : `<span class="badge-avatar-fallback">${escapeHtml(label.substring(0, 1).toUpperCase())}</span>`}
-        </div>
-        <div class="badge-info">
-          <span class="badge-display-name">${label}</span>
-          ${sub && sub !== label ? `<span class="badge-username">@${sub}</span>` : ""}
-        </div>
-        <button
-          class="btn-unlink-roblox"
-          data-roblox-id="${escapeHtml(a.roblox_user_id)}"
-          data-roblox-name="${escapeHtml(a.roblox_username || a.roblox_user_id)}"
-          title="ยกเลิกการเชื่อมต่อบัญชีนี้"
-          aria-label="ยกเลิก ${label}"
-        >×</button>
-      </div>`;
-  }).join("");
-
-  // Batch fetch Roblox avatars for linked badges
-  const ids = accounts.map(a => a.roblox_user_id);
-  fetchAvatars(ids).then(() => {
-    accounts.forEach(a => {
-      const cachedSrc = avatarCache[a.roblox_user_id];
-      if (cachedSrc && cachedSrc !== "loading") {
-        const avatarDivs = accountsListEl.querySelectorAll(`[data-badge-avatar-id="${a.roblox_user_id}"]`);
-        avatarDivs.forEach(div => {
-          if (!div.querySelector("img")) {
-            div.innerHTML = `<img src="${cachedSrc}" alt="${escapeHtml(a.display_name || a.roblox_username)}" />`;
-          }
-        });
-      }
-    });
-  });
-}
 
 // ── Unlink / Delete Roblox Account ────────────────────────────────────────────
 async function deleteAccount(robloxUserId, displayName) {
@@ -640,12 +628,13 @@ async function loadMe() {
 
     const { user } = await res.json();
 
-    // Update Email
-    if (userEmailEl) userEmailEl.textContent = user.email || "";
+    // Update Username
+    const username = user.username || (user.email ? user.email.split("@")[0] : "");
+    if (userUsernameEl) userUsernameEl.textContent = username;
     
     // Update initials icon
-    if (userAvatarInitialsEl && user.email) {
-      userAvatarInitialsEl.textContent = user.email.substring(0, 1).toUpperCase();
+    if (userAvatarInitialsEl && username) {
+      userAvatarInitialsEl.textContent = username.substring(0, 1).toUpperCase();
     }
 
     // Update Script Key
@@ -656,9 +645,8 @@ async function loadMe() {
     currentKey = user.script_key || null;
 
     // Render linked accounts list
-    const accounts = user.roblox_accounts || [];
-    if (accountsCountEl) accountsCountEl.textContent = accounts.length;
-    renderAccounts(accounts);
+    linkedAccounts = user.roblox_accounts || [];
+    if (accountsCountEl) accountsCountEl.textContent = linkedAccounts.length;
   } catch (err) {
     console.warn("loadMe error:", err);
     if (scriptKeyEl) scriptKeyEl.textContent = "ดาวน์โหลดคีย์ล้มเหลว";
@@ -743,16 +731,7 @@ copyAllBtn?.addEventListener("click", async () => {
   }
 });
 
-// Accounts Badges Unlinking
-accountsListEl?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".btn-unlink-roblox");
-  if (!btn) return;
 
-  const robloxId = btn.getAttribute("data-roblox-id");
-  const robloxName = btn.getAttribute("data-roblox-name");
-
-  if (robloxId) deleteAccount(robloxId, robloxName || robloxId);
-});
 
 // Map Tab Sidebar Click Delegation
 mapTabsListEl?.addEventListener("click", (e) => {
@@ -776,15 +755,80 @@ refreshBtn?.addEventListener("click", async () => {
   showToast("รีเฟรชข้อมูลบอร์ดสำเร็จ ✓", "ok");
 });
 
+// Dashboard Clear button
+clearBtn?.addEventListener("click", async () => {
+  // Determine which accounts are currently shown (filtered by map)
+  let accountsToClear = linkedAccounts;
+  if (currentMapFilter) {
+    accountsToClear = linkedAccounts.filter(a => {
+      const p = players.find(p => String(p.userId) === String(a.roblox_user_id));
+      return p && p.mapStates && p.mapStates[currentMapFilter];
+    });
+  }
+
+  if (!accountsToClear.length) {
+    showToast("ไม่มีบัญชีให้ล้างข้อมูลในแมพนี้", "warn");
+    return;
+  }
+
+  const mapName = currentMapFilter || "ทั้งหมด (All Maps)";
+  const confirmMsg = `ต้องการยกเลิกการเชื่อมโยงบัญชีทั้งหมด (${accountsToClear.length} บัญชี) ในแมพ "${mapName}" ใช่หรือไม่?\nการดำเนินการนี้จะลบรายชื่อผู้เล่นที่แสดงอยู่ออกทั้งหมด`;
+  if (!confirm(confirmMsg)) return;
+
+  clearBtn.disabled = true;
+  const originalText = clearBtn.innerHTML;
+  clearBtn.innerHTML = "<span>กำลังล้างข้อมูล...</span>";
+
+  try {
+    const token = await ensureToken();
+    if (!token) return;
+
+    // Send DELETE requests in parallel
+    const deletePromises = accountsToClear.map(a => 
+      fetch(`/api/accounts/${encodeURIComponent(a.roblox_user_id)}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      }).then(res => res.json())
+    );
+
+    const results = await Promise.all(deletePromises);
+    const successCount = results.filter(r => r.ok).length;
+
+    showToast(`ล้างข้อมูลสำเร็จ ${successCount} จาก ${accountsToClear.length} บัญชี`, "ok");
+
+    // Clear state locally and render immediately for instant feedback
+    linkedAccounts = linkedAccounts.filter(a => !accountsToClear.some(ac => ac.roblox_user_id === a.roblox_user_id));
+    players = players.filter(p => !accountsToClear.some(ac => String(ac.roblox_user_id) === String(p.userId)));
+
+    renderMapTabs();
+    render();
+
+    // Reload from server to keep database and UI perfectly in sync
+    await loadMe();
+    await loadPlayers();
+  } catch (err) {
+    console.error("Clear accounts error:", err);
+    showToast("เกิดข้อผิดพลาดในการล้างข้อมูล", "error");
+  } finally {
+    clearBtn.disabled = false;
+    clearBtn.innerHTML = originalText;
+  }
+});
+
 // Logout Button
 logoutBtn?.addEventListener("click", async () => {
   await logout();
 });
 
-// Row Copy Buttons delegation
+// Row Deletion Buttons delegation
 rowsEl?.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-copy]");
-  if (btn) copyToClipboard(btn.getAttribute("data-copy") ?? "");
+  const btn = e.target.closest("[data-delete-id]");
+  if (!btn) return;
+
+  const robloxId = btn.getAttribute("data-delete-id");
+  const displayName = btn.getAttribute("data-delete-name");
+
+  if (robloxId) deleteAccount(robloxId, displayName || robloxId);
 });
 
 // Live Search & Sorting listeners

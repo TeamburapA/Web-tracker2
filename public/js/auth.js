@@ -154,23 +154,24 @@ async function initLoginPage() {
 
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = document.getElementById("loginEmail").value.trim();
+    const username = document.getElementById("loginUsername").value.trim();
     const password = document.getElementById("loginPassword").value;
 
-    if (!email || !password) {
-      if (!email) markInvalid(document.getElementById("loginEmail"));
+    if (!username || !password) {
+      if (!username) markInvalid(document.getElementById("loginUsername"));
       if (!password) markInvalid(document.getElementById("loginPassword"));
-      showError("กรุณากรอกอีเมลและรหัสผ่าน");
+      showError("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
       return;
     }
 
     setLoading(btn, true);
     try {
       const sb = await getSupabase();
+      const email = `${username.toLowerCase()}@tracker.local`;
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) {
         showError(error.message?.includes("Invalid login credentials")
-          ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : error.message);
+          ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" : error.message);
         markInvalid(document.getElementById("loginPassword"));
         setLoading(btn, false);
         return;
@@ -193,24 +194,33 @@ async function initRegisterPage() {
 
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = document.getElementById("regEmail").value.trim();
+    const username = document.getElementById("regUsername").value.trim();
     const password = document.getElementById("regPassword").value;
     const confirm = document.getElementById("regConfirm").value;
 
     let hasError = false;
-    if (!email) { markInvalid(document.getElementById("regEmail")); hasError = true; }
+    if (!username) { markInvalid(document.getElementById("regUsername")); hasError = true; }
     if (!password) { markInvalid(document.getElementById("regPassword")); hasError = true; }
     if (!confirm) { markInvalid(document.getElementById("regConfirm")); hasError = true; }
     if (hasError) { showError("กรุณากรอกข้อมูลให้ครบถ้วน"); return; }
+
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      markInvalid(document.getElementById("regUsername"));
+      showError("ชื่อผู้ใช้ต้องมีความยาว 3-20 ตัวอักษร และประกอบด้วยภาษาอังกฤษ ตัวเลข หรือเครื่องหมาย _ เท่านั้น");
+      return;
+    }
+
     if (password.length < 6) { markInvalid(document.getElementById("regPassword")); showError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"); return; }
     if (password !== confirm) { markInvalid(document.getElementById("regConfirm")); showError("รหัสผ่านไม่ตรงกัน"); return; }
 
     setLoading(btn, true);
     try {
       const sb = await getSupabase();
+      const email = `${username.toLowerCase()}@tracker.local`;
       const { error } = await sb.auth.signUp({ email, password });
       if (error) {
-        showError(error.message?.includes("already registered") ? "อีเมลนี้ถูกใช้ไปแล้ว" : error.message);
+        showError(error.message?.includes("already registered") || error.message?.includes("already exists") ? "ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว" : error.message);
         setLoading(btn, false);
         return;
       }

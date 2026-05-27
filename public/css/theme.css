@@ -473,139 +473,6 @@ body {
   box-shadow: 0 4px 16px rgba(255, 193, 7, 0.35);
 }
 
-/* ── Roblox Linked Accounts Row ────────────────────────────── */
-.linked-accounts-container {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-sm);
-}
-
-.linked-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.linked-title {
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.linked-badge-count {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  background: rgba(255, 193, 7, 0.12);
-  color: var(--primary);
-  padding: 2px 8px;
-  border-radius: 99px;
-  border: 1px solid rgba(255, 193, 7, 0.2);
-}
-
-.accounts-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  min-height: 48px;
-  align-items: center;
-}
-
-.roblox-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--panel-solid);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 6px 12px 6px 6px;
-  border-radius: 99px;
-  transition: var(--transition);
-  position: relative;
-}
-
-.roblox-badge:hover {
-  border-color: rgba(255, 193, 7, 0.3);
-  background: var(--panel-hover);
-  transform: translateY(-1px);
-}
-
-.badge-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #181b22;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.badge-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.badge-avatar-fallback {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.badge-info {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.badge-display-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.badge-username {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.btn-unlink-roblox {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px;
-  font-size: 14px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  margin-left: 4px;
-  transition: var(--transition);
-}
-
-.btn-unlink-roblox:hover {
-  background: rgba(255, 82, 82, 0.15);
-  color: var(--danger);
-}
-
-.accounts-empty-state {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-style: italic;
-}
 
 /* ── Live Roster Table Section (Bottom Info) ────────────────── */
 .table-section {
@@ -730,6 +597,31 @@ body {
   cursor: not-allowed;
 }
 
+.btn-clear-dashboard {
+  height: 38px;
+  padding: 0 14px;
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.18);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.btn-clear-dashboard:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 4px 14px var(--danger-glow);
+}
+
 .refresh-spin-svg {
   width: 16px;
   height: 16px;
@@ -747,6 +639,8 @@ body {
 /* Roster Table Styling */
 .table-wrapper {
   overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .roster-table {
@@ -886,6 +780,42 @@ body {
   color: var(--text-muted);
 }
 
+.status-pill.farming {
+  background: rgba(255, 159, 67, 0.08);
+  border: 1px solid rgba(255, 159, 67, 0.25);
+  color: #ff9f43;
+  animation: textPulse 2s infinite ease-in-out;
+}
+
+.status-pill.farming .status-dot {
+  background: #ff9f43;
+  animation: statusPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes statusPulse {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(255, 159, 67, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(255, 159, 67, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(255, 159, 67, 0);
+  }
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .status-dot {
   width: 6px;
   height: 6px;
@@ -906,24 +836,28 @@ body {
   color: var(--text-muted);
 }
 
-.btn-copy-roster-id {
+.btn-delete-roster-id {
   height: 28px;
   padding: 0 10px;
-  background: rgba(255, 193, 7, 0.07);
-  border: 1px solid rgba(255, 193, 7, 0.15);
-  color: var(--primary);
+  background: rgba(255, 82, 82, 0.07);
+  border: 1px solid rgba(255, 82, 82, 0.15);
+  color: var(--danger);
   border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   transition: var(--transition);
 }
 
-.btn-copy-roster-id:hover {
-  background: var(--primary);
-  color: var(--primary-solid);
-  border-color: var(--primary);
+.btn-delete-roster-id:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 4px 10px var(--danger-glow);
 }
 
 .empty-table-state {

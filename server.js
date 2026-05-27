@@ -749,6 +749,7 @@ async function handler(req, res) {
         user: {
           id: user.id,
           email: user.email,
+          username: user.email ? user.email.split("@")[0] : null,
           script_key: profile?.script_key || null,
           roblox_accounts: robloxAccounts || [],
         },
