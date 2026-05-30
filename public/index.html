@@ -66,17 +66,12 @@
         <div class="key-dashboard-card">
           <div class="key-card-header">
             <span class="key-title">Script Management</span>
-            <span class="key-sub">— กรอก Key และคัดลอกScript</span>
           </div>
           
           <div class="key-actions-row">
             <div class="key-display-box">
-              <input type="text" id="manualScriptKey" class="key-input" placeholder="Enter your personal key" />
+              <input type="text" id="manualScriptKey" class="key-input" placeholder="Loading personal key..." readonly />
             </div>
-            
-            <button type="button" id="saveKeyBtn" class="btn-key-action btn-key-action-primary">
-              Save Key
-            </button>
           </div>
           
           <button type="button" id="copyAllBtn" class="btn-key-action btn-key-action-primary btn-copy-script-wide" title="คัดลอกสคริปต์ Roblox สำหรับรัน">
@@ -148,8 +143,10 @@
       </section>
 
       <footer style="margin-top: 20px; display: flex; gap: 20px; justify-content: flex-end; font-size: 12px; color: var(--text-muted);">
-        <div>Total coins: <strong id="totalCoins" style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">0</strong></div>
-        <div><span id="totalUnitsLabel">Total units</span>: <strong id="totalUnits" style="color: #9b8cfa; font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div id="footerCoinsWrapper">Total coins: <strong id="totalCoins" style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div id="footerUnitsWrapper"><span id="totalUnitsLabel">Total units</span>: <strong id="totalUnits" style="color: #9b8cfa; font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div id="footerCreditsWrapper" style="display: none;">Total credits: <strong id="totalCredits" style="color: #4ade80; font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div id="footerVoidShardsWrapper" style="display: none;">Total voidshards: <strong id="totalVoidShards" style="color: #c084fc; font-family: 'JetBrains Mono', monospace;">0</strong></div>
       </footer>
     </main>
   </div>

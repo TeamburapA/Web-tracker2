@@ -127,7 +127,7 @@ async function ensureUserProfile(userId) {
     .upsert(
       {
         user_id: userId,
-        script_key: crypto.randomUUID(),
+        script_key: crypto.randomUUID().replace(/-/g, ""),
       },
       { onConflict: "user_id" }
     )
@@ -743,7 +743,7 @@ async function handler(req, res) {
       return;
     }
 
-    if (req.method === "GET" && pathname === "/api/me") {
+    if (req.method === "GET" && (pathname === "/api/me" || pathname === "/api/profile")) {
       const user = await verifyJwt(req);
       if (!user) {
         sendJson(res, 401, { ok: false, error: "Unauthorized" });

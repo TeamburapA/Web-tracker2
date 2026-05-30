@@ -50,7 +50,6 @@ const totalUnitsLabelEl = document.getElementById("totalUnitsLabel");
 const copyAllBtn = document.getElementById("copyAllBtn");
 const copyToast = document.getElementById("copyToast");
 const manualScriptKeyEl = document.getElementById("manualScriptKey");
-const saveKeyBtn = document.getElementById("saveKeyBtn");
 const accountsCountEl = document.getElementById("accountsCount");
 const userUsernameEl = document.getElementById("userUsername");
 const userAvatarInitialsEl = document.getElementById("userAvatarInitials");
@@ -59,6 +58,12 @@ const clearBtn = document.getElementById("clearBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const tableCountLabel = document.getElementById("tableCountLabel");
 const mapTabsListEl = document.getElementById("mapTabsList");
+const footerCoinsWrapper = document.getElementById("footerCoinsWrapper");
+const footerUnitsWrapper = document.getElementById("footerUnitsWrapper");
+const footerCreditsWrapper = document.getElementById("footerCreditsWrapper");
+const footerVoidShardsWrapper = document.getElementById("footerVoidShardsWrapper");
+const totalCreditsEl = document.getElementById("totalCredits");
+const totalVoidShardsEl = document.getElementById("totalVoidShards");
 
 // ── State Variables ───────────────────────────────────────────────────────────
 let players = [];
@@ -473,6 +478,16 @@ function render() {
   const online = filtered.filter(isOnline).length;
   const totalCoins = filtered.reduce((s, p) => s + Number(p.coins || 0), 0);
   const totalUnits = filtered.reduce((s, p) => s + sumAllUnits(p.units), 0);
+  
+  const totalCredits = filtered.reduce((s, p) => {
+    const u = p.units || {};
+    return s + Number(u.Credits ?? u.credits ?? 0);
+  }, 0);
+  
+  const totalVoidShards = filtered.reduce((s, p) => {
+    const u = p.units || {};
+    return s + Number(u.VoidShards ?? u.voidshards ?? u.void_shards ?? 0);
+  }, 0);
 
   // Update Counters
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
@@ -480,13 +495,9 @@ function render() {
     totalCoinsEl.textContent = formatNumber(totalCoins);
   }
   if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
-  if (totalUnitsLabelEl) {
-    if (currentMapFilter === "Survive Zombie Arena") {
-      totalUnitsLabelEl.textContent = "Total items";
-    } else {
-      totalUnitsLabelEl.textContent = "Total units";
-    }
-  }
+  if (totalCreditsEl) totalCreditsEl.textContent = formatNumber(totalCredits);
+  if (totalVoidShardsEl) totalVoidShardsEl.textContent = formatNumber(totalVoidShards);
+
   if (tableCountLabel) {
     tableCountLabel.textContent = filtered.length
       ? `แสดงบัญชีที่คัดกรองอยู่ ${formatNumber(filtered.length)} จากทั้งหมด ${formatNumber(players.length)} บัญชี`
@@ -515,16 +526,30 @@ function render() {
 
   const colSpan = 5 + (showToilet ? 3 : 0) + (showZombie ? 3 : 0) - (showCoins ? 0 : 1);
 
+  // Toggle display properties of columns (both th in thead and new td in tbody)
+  document.querySelectorAll(".col-toilet").forEach(el => el.style.display = showToilet ? "" : "none");
+  document.querySelectorAll(".col-zombie").forEach(el => el.style.display = showZombie ? "" : "none");
+  document.querySelectorAll(".col-coins").forEach(el => el.style.display = showCoins ? "" : "none");
+
+  // Show hide footer wrappers
+  if (currentMapFilter === "Survive Zombie Arena") {
+    if (footerCoinsWrapper) footerCoinsWrapper.style.display = "none";
+    if (footerUnitsWrapper) footerUnitsWrapper.style.display = "none";
+    if (footerCreditsWrapper) footerCreditsWrapper.style.display = "block";
+    if (footerVoidShardsWrapper) footerVoidShardsWrapper.style.display = "block";
+  } else {
+    if (footerCoinsWrapper) footerCoinsWrapper.style.display = showCoins ? "block" : "none";
+    if (footerUnitsWrapper) footerUnitsWrapper.style.display = "block";
+    if (footerCreditsWrapper) footerCreditsWrapper.style.display = "none";
+    if (footerVoidShardsWrapper) footerVoidShardsWrapper.style.display = "none";
+    
+    if (totalUnitsLabelEl) {
+      totalUnitsLabelEl.textContent = "Total units";
+    }
+  }
+
   if (!filtered.length) {
     rowsEl.innerHTML = `<tr><td colspan="${colSpan}" class="empty-table-state">ยังไม่มีข้อมูลบัญชีในแผนที่นี้ — กรุณารัน Script ใน Roblox ก่อนนะ</td></tr>`;
-    
-    // Toggle display properties of columns even for empty state
-    document.querySelectorAll(".col-toilet").forEach(el => el.style.display = showToilet ? "" : "none");
-    document.querySelectorAll(".col-zombie").forEach(el => el.style.display = showZombie ? "" : "none");
-    document.querySelectorAll(".col-coins").forEach(el => el.style.display = showCoins ? "" : "none");
-    if (totalCoinsEl && totalCoinsEl.parentElement) {
-      totalCoinsEl.parentElement.style.display = showCoins ? "block" : "none";
-    }
     return;
   }
 
@@ -617,9 +642,17 @@ function render() {
   document.querySelectorAll(".col-zombie").forEach(el => el.style.display = showZombie ? "" : "none");
   document.querySelectorAll(".col-coins").forEach(el => el.style.display = showCoins ? "" : "none");
 
-  // Show hide the Coins total element wrapper
-  if (totalCoinsEl && totalCoinsEl.parentElement) {
-    totalCoinsEl.parentElement.style.display = showCoins ? "block" : "none";
+  // Show hide footer wrappers
+  if (currentMapFilter === "Survive Zombie Arena") {
+    if (footerCoinsWrapper) footerCoinsWrapper.style.display = "none";
+    if (footerUnitsWrapper) footerUnitsWrapper.style.display = "none";
+    if (footerCreditsWrapper) footerCreditsWrapper.style.display = "block";
+    if (footerVoidShardsWrapper) footerVoidShardsWrapper.style.display = "block";
+  } else {
+    if (footerCoinsWrapper) footerCoinsWrapper.style.display = showCoins ? "block" : "none";
+    if (footerUnitsWrapper) footerUnitsWrapper.style.display = "block";
+    if (footerCreditsWrapper) footerCreditsWrapper.style.display = "none";
+    if (footerVoidShardsWrapper) footerVoidShardsWrapper.style.display = "none";
   }
 }
 
@@ -670,11 +703,16 @@ async function loadMe() {
     }
 
     if (!res.ok) {
-      if (scriptKeyEl) scriptKeyEl.textContent = "ดาวน์โหลดคีย์ล้มเหลว";
+      if (manualScriptKeyEl) manualScriptKeyEl.value = "ดาวน์โหลดคีย์ล้มเหลว";
       return;
     }
 
     const { user } = await res.json();
+
+    // Populate user script key
+    if (manualScriptKeyEl && user.script_key) {
+      manualScriptKeyEl.value = user.script_key;
+    }
 
     // Update Username
     const username = user.username || (user.email ? user.email.split("@")[0] : "");
@@ -690,7 +728,7 @@ async function loadMe() {
     if (accountsCountEl) accountsCountEl.textContent = linkedAccounts.length;
   } catch (err) {
     console.warn("loadMe error:", err);
-    if (scriptKeyEl) scriptKeyEl.textContent = "ดาวน์โหลดคีย์ล้มเหลว";
+    if (manualScriptKeyEl) manualScriptKeyEl.value = "ดาวน์โหลดคีย์ล้มเหลว";
   }
 }
 
@@ -738,26 +776,12 @@ async function loadPlayers() {
 }
 
 // ── Bind Event Listeners ──────────────────────────────────────────────────────
-saveKeyBtn?.addEventListener("click", () => {
-  const keyVal = manualScriptKeyEl?.value.trim() || "";
-  localStorage.setItem("manual_script_key", keyVal);
-  if (window.Swal) {
-    Swal.fire({
-      icon: 'success',
-      title: 'บันทึกสำเร็จ!',
-      text: 'บันทึกคีย์ส่วนตัวเรียบร้อยแล้ว',
-      timer: 1500,
-      showConfirmButton: false,
-      background: '#12141a',
-      color: '#f8f9fa'
-    });
-  } else {
-    showToast("บันทึกคีย์เรียบร้อยแล้ว ✓", "ok");
-  }
-});
-
 copyAllBtn?.addEventListener("click", async () => {
-  const keyVal = localStorage.getItem("manual_script_key") || "";
+  const keyVal = manualScriptKeyEl?.value.trim() || "";
+  if (!keyVal || keyVal === "ดาวน์โหลดคีย์ล้มเหลว" || keyVal.startsWith("Loading")) {
+    showToast("ยังไม่มีรหัสคีย์ประจำตัว", "warn");
+    return;
+  }
   try {
     showToast("กำลังคอมไพล์สคริปต์...", "info");
 
@@ -883,11 +907,6 @@ sortSelect?.addEventListener("change", render);
 (async () => {
   const ok = await initGuard();
   if (!ok) return;
-
-  // Initialize manual script key input from LocalStorage
-  if (manualScriptKeyEl) {
-    manualScriptKeyEl.value = localStorage.getItem("manual_script_key") || "";
-  }
 
   await ensureToken();
   await loadMe();

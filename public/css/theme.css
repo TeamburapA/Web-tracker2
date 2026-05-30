@@ -427,8 +427,7 @@ body {
 }
 
 .key-display-box {
-  flex: 2; /* ปล่อยให้กล่องแสดงรหัส/อินพุตขยายตัวกว้างกว่าปุ่มกด */
-  min-width: 160px; /* จำกัดความกว้างขั้นต่ำไม่ให้หดจนอ่านไม่รู้เรื่อง */
+  width: 100%;
   height: 38px;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--line-solid);
@@ -459,6 +458,11 @@ body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 500;
+}
+
+.key-input:read-only {
+  color: var(--text-secondary);
+  cursor: default;
 }
 
 .key-expiry {
