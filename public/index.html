@@ -7,6 +7,7 @@
   <title>Dashboard — Chick Chick tracker</title>
   <meta name="description" content="Professional real-time Roblox player dashboard and Web Tracker." />
   <link rel="stylesheet" href="/css/theme.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -46,51 +47,51 @@
     <main class="main-content">
       <header class="main-header">
         <div class="welcome-section">
-          <h2>แผงควบคุมระบบ / Dashboard</h2>
-          <p>ตรวจจับและบันทึกข้อมูลบัญชี Roblox แบบเรียลไทม์</p>
+          <h2>Dashboard</h2>
+          
         </div>
       </header>
 
       <section class="top-layout">
         <div class="stat-card">
-          <div class="stat-label">บัญชีออนไลน์ (Online)</div>
+          <div class="stat-label">Online</div>
           <div class="stat-value" id="onlineCount">0</div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-label">บัญชีทั้งหมด (Total)</div>
+          <div class="stat-label">Total</div>
           <div class="stat-value" id="accountsCount">0</div>
         </div>
 
         <div class="key-dashboard-card">
           <div class="key-card-header">
-            <span class="key-title">Script Key สำหรับนำไปรัน</span>
-            <span class="key-sub">— คัดลอก Key หรือตัวสคริปต์ได้ที่นี่</span>
+            <span class="key-title">Script Management</span>
+            <span class="key-sub">— กรอก Key และคัดลอกScript</span>
           </div>
           
           <div class="key-actions-row">
             <div class="key-display-box">
-              <code id="scriptKeyValue">กำลังโหลด...</code>
+              <input type="text" id="manualScriptKey" class="key-input" placeholder="Enter your personal key" />
             </div>
             
-            <button type="button" id="scriptKeyCopyBtn" class="btn-key-action" title="คัดลอกเฉพาะรหัส Key">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              คัดลอก Key
-            </button>
-            
-            <button type="button" id="copyAllBtn" class="btn-key-action btn-key-action-primary" title="คัดลอกสคริปต์ Roblox สำหรับรัน">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-              คัดลอก Script
+            <button type="button" id="saveKeyBtn" class="btn-key-action btn-key-action-primary">
+              Save Key
             </button>
           </div>
+          
+          <button type="button" id="copyAllBtn" class="btn-key-action btn-key-action-primary btn-copy-script-wide" title="คัดลอกสคริปต์ Roblox สำหรับรัน">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            Copy Script
+          </button>
         </div>
+
       </section>
 
       <section class="table-section">
         <div class="table-controls">
           <div class="table-title-group">
-            <h3>แถบข้อมูลการทำงานบัญชีทั้งหมด</h3>
-            <p id="tableCountLabel">Live roster standby</p>
+            <h3>Live Roster </h3>
+     
           </div>
           
           <div class="controls-right">
@@ -100,16 +101,16 @@
             </div>
             
             <select id="sortSelect" class="sort-select">
-              <option value="coins">เหรียญ (Coins - สูงสุด)</option>
-              <option value="updated">อัปเดตล่าสุด (Last Update)</option>
-              <option value="utc">UTC (สูงสุด)</option>
-              <option value="uts">UTS (สูงสุด)</option>
-              <option value="cinema">Cinema (สูงสุด)</option>
+              <option value="coins">Coins - highest</option>
+              <option value="updated">Last Update</option>
+              <option value="utc">UTC - highest</option>
+              <option value="uts">UTS - highest</option>
+              <option value="cinema">Cinema - highest</option>
             </select>
             
             <button type="button" id="clearBtn" class="btn-clear-dashboard" title="ยกเลิกการเชื่อมโยงบัญชีทั้งหมดที่แสดงอยู่ตอนนี้">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-              <span>ล้างข้อมูล (Clear)</span>
+              <span>Clear</span>
             </button>
             
             <button type="button" id="refreshBtn" class="btn-refresh-dashboard" title="รีเฟรชข้อมูล">
@@ -122,16 +123,24 @@
           <table class="roster-table">
             <thead>
               <tr>
-                <th>บัญชีผู้ใช้ (Account)</th>
-                <th>Coins (เหรียญ)</th>
-                <th>สถานะ (Status)</th>
-                <th>อัปเดตล่าสุด (Last Update)</th>
-                <th>จัดการ (Action)</th>
+                <th>Account</th>
+                <th class="col-coins">Coins </th>
+                <!-- Survive Zombie Arena -->
+                <th class="col-zombie">Credits</th>
+                <th class="col-zombie">VoidShards</th>
+                <th class="col-zombie">Class</th>
+                <!-- Toilet Tower Defense -->
+                <th class="col-toilet">UTC</th>
+                <th class="col-toilet">UTS</th>
+                <th class="col-toilet">Cinema</th>
+                <th>Status</th>
+                <th>Last Update</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="playerRows">
               <tr>
-                <td colspan="5" class="empty-table-state">กำลังดึงข้อมูลบัญชี Roblox...</td>
+                <td colspan="11" class="empty-table-state">กำลังดึงข้อมูลบัญชี Roblox...</td>
               </tr>
             </tbody>
           </table>
@@ -139,19 +148,15 @@
       </section>
 
       <footer style="margin-top: 20px; display: flex; gap: 20px; justify-content: flex-end; font-size: 12px; color: var(--text-muted);">
-        <div>เหรียญรวมทั้งหมด: <strong id="totalCoins" style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">0</strong></div>
-        <div>ยูนิตรวมทั้งหมด: <strong id="totalUnits" style="color: #9b8cfa; font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div>Total coins: <strong id="totalCoins" style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">0</strong></div>
+        <div><span id="totalUnitsLabel">Total units</span>: <strong id="totalUnits" style="color: #9b8cfa; font-family: 'JetBrains Mono', monospace;">0</strong></div>
       </footer>
     </main>
   </div>
 
   <div id="copyToast" class="copy-toast" style="display: none;">คัดลอกสำเร็จ ✓</div>
 
-  <script>
-    document.getElementById("copyScriptBtnMirror")?.addEventListener("click", () => {
-      document.getElementById("copyAllBtn")?.click();
-    });
-  </script>
+
 
   <script type="module" src="/js/app.js"></script>
 </body>

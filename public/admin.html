@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel — Chick Chick tracker</title>
+  <meta name="description" content="Professional administration panel for Chick Chick tracker." />
+  <link rel="stylesheet" href="/css/theme.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    /* Additional Styles specific to Admin Dashboard */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    
+    @media (min-width: 1024px) {
+      .admin-grid {
+        grid-template-columns: 350px 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-secondary);
+    }
+
+    .form-input {
+      height: 38px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--line-solid);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 0 12px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .btn-submit {
+      width: 100%;
+      height: 38px;
+      background: var(--primary);
+      color: var(--primary-solid);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition);
+    }
+
+    .btn-submit:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 16px rgba(255, 193, 7, 0.35);
+    }
+
+    .btn-action-key {
+      height: 28px;
+      padding: 0 10px;
+      background: rgba(255, 193, 7, 0.08);
+      border: 1px solid rgba(255, 193, 7, 0.18);
+      color: var(--primary);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: var(--transition);
+    }
+
+    .btn-action-key:hover {
+      background: var(--primary);
+      color: var(--primary-solid);
+    }
+
+    .badge-used {
+      background: rgba(255, 82, 82, 0.08);
+      border: 1px solid rgba(255, 82, 82, 0.2);
+      color: var(--danger);
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-available {
+      background: rgba(46, 196, 182, 0.08);
+      border: 1px solid rgba(46, 196, 182, 0.2);
+      color: var(--success);
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-container">
+
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-icon">🐥</span>
+        <div class="logo-text">
+          <h1>Chick Chick </h1>
+          <p>Web Tracker</p>
+        </div>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-title">เมนูควบคุม</div>
+        <nav class="map-tabs">
+          <a href="/index.html" class="map-tab-btn" style="text-decoration: none;">
+            <span>📊 แดชบอร์ดหลัก</span>
+          </a>
+          <a href="/admin.html" class="map-tab-btn active" style="text-decoration: none;">
+            <span>⚙️ จัดการระบบ (Admin)</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar-circle" id="userAvatarInitials">A</div>
+          <div class="user-details">
+            <div id="userUsername" class="user-name-label">Admin</div>
+          </div>
+        </div>
+        <button type="button" id="logoutBtn" class="btn-sidebar-logout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Logout
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="main-header">
+        <div class="welcome-section">
+          <h2>ระบบจัดการหลังบ้าน / Admin Control Panel</h2>
+          <p>ค้นหารายชื่อผู้ใช้งานและเปลี่ยนรหัสผ่านเพื่อบริการลูกค้า</p>
+        </div>
+      </header>
+
+      <div class="admin-grid" style="grid-template-columns: 1fr;">
+        <!-- Main Area: User List Table -->
+        <section class="table-section">
+          <div class="table-controls">
+            <div class="table-title-group">
+              <h3>รายชื่อผู้ใช้งานในระบบ (User Management)</h3>
+              <p id="usersCountLabel">กำลังโหลดรายชื่อผู้ใช้...</p>
+            </div>
+            
+            <div class="controls-right">
+              <div class="search-wrapper">
+                <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="12.2" x2="16.65" y2="12.2"></line><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input id="userSearchInput" type="search" class="search-input" placeholder="ค้นหาผู้ใช้ หรืออีเมล..." style="width: 280px;" />
+              </div>
+              
+              <button type="button" id="refreshBtn" class="btn-refresh-dashboard" title="รีเฟรชข้อมูล">
+                <svg class="refresh-spin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="roster-table">
+              <thead>
+                <tr>
+                  <th>ผู้ใช้งาน (User Profile)</th>
+                  <th>User ID (UID)</th>
+                  <th>Script Key ประจำตัว</th>
+                  <th>จัดการ (Action)</th>
+                </tr>
+              </thead>
+              <tbody id="userRows">
+                <tr>
+                  <td colspan="4" class="empty-table-state">กำลังดึงข้อมูลรายชื่อผู้ใช้...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="copyToast" class="copy-toast" style="display: none;">คัดลอกสำเร็จ ✓</div>
+
+  <script type="module" src="/js/admin.js"></script>
+</body>
+
+</html>

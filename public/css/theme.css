@@ -310,12 +310,12 @@ body {
   margin-top: 4px;
 }
 
-/* Top Stats Cards + Key */
 .top-layout {
   display: grid;
   grid-template-columns: 240px 240px 1fr;
   gap: 16px;
   margin-bottom: 24px;
+  align-items: stretch;
 }
 
 .stat-card {
@@ -383,6 +383,7 @@ body {
   justify-content: space-between;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
+  min-height: 140px; /* ล็อกความสูงขั้นต่ำให้เท่ากันทุกกล่องเพื่อความสวยงามสมมาตร */
 }
 
 .key-dashboard-card:hover {
@@ -409,14 +410,25 @@ body {
   color: var(--text-muted);
 }
 
+/* จัดกลุ่มแถวอินพุตและปุ่มภายในกล่องคีย์ */
 .key-actions-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+  width: 100%;
+  margin-top: auto; /* ดันกลุ่มปุ่มลงไปอยู่ด้านล่างสุดของกล่องเสมอ */
+  flex-wrap: nowrap;  /* ป้องกันการหล่นแถวเพื่อให้ปุ่มจัดวางคู่กันสวยงาม */
+}
+
+.btn-copy-script-wide {
+  width: 100%;
+  margin-top: 10px;
+  flex: none;
 }
 
 .key-display-box {
-  flex: 1;
+  flex: 2; /* ปล่อยให้กล่องแสดงรหัส/อินพุตขยายตัวกว้างกว่าปุ่มกด */
+  min-width: 160px; /* จำกัดความกว้างขั้นต่ำไม่ให้หดจนอ่านไม่รู้เรื่อง */
   height: 38px;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--line-solid);
@@ -438,22 +450,36 @@ body {
   width: 100%;
 }
 
+.key-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  outline: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.key-expiry {
+  font-weight: 600;
+}
+
+/* หน้าต่างปุ่มกดในกล่องคีย์ */
 .btn-key-action {
+  flex: 1; /* แบ่งพื้นที่ปุ่มให้เท่ากันอย่างสมส่วน */
   height: 38px;
   padding: 0 14px;
-  background: rgba(255, 193, 7, 0.08);
-  border: 1px solid rgba(255, 193, 7, 0.18);
-  color: var(--primary);
-  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
+  white-space: nowrap; /* ห้ามข้อความในปุ่มแตกแถวเด็ดขาด */
+  border-radius: var(--radius-sm);
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  cursor: pointer;
   transition: var(--transition);
-  white-space: nowrap;
 }
 
 .btn-key-action:hover {
@@ -648,6 +674,7 @@ body {
   border-collapse: collapse;
   text-align: left;
   font-size: 13px;
+  table-layout: auto;
 }
 
 .roster-table th {

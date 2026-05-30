@@ -84,6 +84,20 @@ async function verifyJwt(req) {
   return user;
 }
 
+async function isAdminUser(req) {
+  const adminKeyHeader = req.headers["x-admin-key"] || req.headers["x-dashboard-key"];
+  if (adminKeyHeader && adminKeyHeader === (process.env.DASHBOARD_KEY || "chick-local-key")) {
+    return true;
+  }
+  
+  const authUser = await verifyJwt(req);
+  if (authUser && (authUser.email === "admin@tracker.local" || authUser.email.startsWith("admin@"))) {
+    return true;
+  }
+  
+  return false;
+}
+
 async function getUserByScriptKey(scriptKey) {
   const { data, error } = await getSupabase()
     .from("user_profiles")
@@ -822,7 +836,6 @@ async function handler(req, res) {
       sendJson(res, 200, { ok: true, player });
       return;
     }
-
     // ── NEW: /roblox/update — Dynamic Inventory Schema ──────────────
     if (req.method === "POST" && pathname === "/roblox/update") {
       const robloxHandler = require("./api/roblox-update");

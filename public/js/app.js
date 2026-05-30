@@ -46,10 +46,11 @@ const sortSelect = document.getElementById("sortSelect");
 const onlineCountEl = document.getElementById("onlineCount");
 const totalCoinsEl = document.getElementById("totalCoins");
 const totalUnitsEl = document.getElementById("totalUnits");
+const totalUnitsLabelEl = document.getElementById("totalUnitsLabel");
 const copyAllBtn = document.getElementById("copyAllBtn");
 const copyToast = document.getElementById("copyToast");
-const scriptKeyEl = document.getElementById("scriptKeyValue");
-const scriptKeyCopyBtn = document.getElementById("scriptKeyCopyBtn");
+const manualScriptKeyEl = document.getElementById("manualScriptKey");
+const saveKeyBtn = document.getElementById("saveKeyBtn");
 const accountsCountEl = document.getElementById("accountsCount");
 const userUsernameEl = document.getElementById("userUsername");
 const userAvatarInitialsEl = document.getElementById("userAvatarInitials");
@@ -63,7 +64,6 @@ const mapTabsListEl = document.getElementById("mapTabsList");
 let players = [];
 let serverNow = Date.now();
 let authToken = null;
-let currentKey = null;
 let playersTimer = null;
 let meTimer = null;
 let currentMapFilter = null; // Stores selected map name, null represents "All Maps"
@@ -403,13 +403,13 @@ function updateSortOptions() {
   // Keep coins and updated, then add column-specific sorts
   const baseOptions = [];
   if (currentMapFilter !== "Survive Zombie Arena") {
-    baseOptions.push({ value: "coins", label: "เหรียญ (Coins - สูงสุด)" });
+    baseOptions.push({ value: "coins", label: "Coins - highest" });
   }
-  baseOptions.push({ value: "updated", label: "อัปเดตล่าสุด (Last Update)" });
+  baseOptions.push({ value: "updated", label: "Last Update" });
 
   const colOptions = cols
     .filter(c => c.sortKey)
-    .map(c => ({ value: c.sortKey, label: `${c.label} (สูงสุด)` }));
+    .map(c => ({ value: c.sortKey, label: `${c.label} highest` }));
 
   const allOptions = [...baseOptions, ...colOptions];
 
@@ -428,25 +428,19 @@ function updateSortOptions() {
 // ── Render Main Roster Table ──────────────────────────────────────────────────
 function render() {
   const query = searchInput?.value.trim().toLowerCase() || "";
-  const cols = getActiveColumns();
-  const showCoins = currentMapFilter !== "Survive Zombie Arena";
-  const colSpan = (showCoins ? 5 : 4) + cols.length; // Account + Coins (optional) + cols + Status + Update + Action
 
   // Update sort dropdown for current map view
   updateSortOptions();
 
-  // Update table headers dynamically
-  const thead = document.querySelector(".roster-table thead tr");
-  if (thead) {
-    const colHeaders = cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join("");
-    thead.innerHTML = `
-      <th>บัญชีผู้ใช้ (Account)</th>
-      ${showCoins ? '<th>Coins (เหรียญ)</th>' : ''}
-      ${colHeaders}
-      <th>สถานะ (Status)</th>
-      <th>อัปเดตล่าสุด (Last Update)</th>
-      <th>จัดการ (Action)</th>
-    `;
+  if (!currentMapFilter || currentMapFilter === "all") {
+    rowsEl.innerHTML = `<tr><td colspan="5" class="empty-table-state" style="text-align: center; padding: 60px;">กรุณาเลือกแมพทางด้านซ้ายเพื่อดูข้อมูลบัญชี...</td></tr>`;
+    document.querySelectorAll(".col-toilet").forEach(el => el.style.display = "none");
+    document.querySelectorAll(".col-zombie").forEach(el => el.style.display = "none");
+    document.querySelectorAll(".col-coins").forEach(el => el.style.display = "");
+    if (totalCoinsEl && totalCoinsEl.parentElement) {
+      totalCoinsEl.parentElement.style.display = "block";
+    }
+    return;
   }
 
   // Filter players by Search query AND selected Sidebar Map Filter
@@ -484,19 +478,53 @@ function render() {
   if (onlineCountEl) onlineCountEl.textContent = formatNumber(online);
   if (totalCoinsEl) {
     totalCoinsEl.textContent = formatNumber(totalCoins);
-    if (totalCoinsEl.parentElement) {
-      totalCoinsEl.parentElement.style.display = showCoins ? "block" : "none";
-    }
   }
   if (totalUnitsEl) totalUnitsEl.textContent = formatNumber(totalUnits);
+  if (totalUnitsLabelEl) {
+    if (currentMapFilter === "Survive Zombie Arena") {
+      totalUnitsLabelEl.textContent = "Total items";
+    } else {
+      totalUnitsLabelEl.textContent = "Total units";
+    }
+  }
   if (tableCountLabel) {
     tableCountLabel.textContent = filtered.length
       ? `แสดงบัญชีที่คัดกรองอยู่ ${formatNumber(filtered.length)} จากทั้งหมด ${formatNumber(players.length)} บัญชี`
       : "Roster standby — ยังไม่มีบัญชีรันระบบสคริปต์";
   }
 
+  // Determine visibility states
+  let showCoins = true;
+  let showToilet = false;
+  let showZombie = false;
+
+  if (currentMapFilter === "[LEGACY] Toilet Tower Defense") {
+    showToilet = true;
+    showZombie = false;
+    showCoins = true;
+  } else if (currentMapFilter === "Survive Zombie Arena") {
+    showToilet = false;
+    showZombie = true;
+    showCoins = false;
+  } else {
+    // Map All
+    showToilet = false;
+    showZombie = false;
+    showCoins = true;
+  }
+
+  const colSpan = 5 + (showToilet ? 3 : 0) + (showZombie ? 3 : 0) - (showCoins ? 0 : 1);
+
   if (!filtered.length) {
     rowsEl.innerHTML = `<tr><td colspan="${colSpan}" class="empty-table-state">ยังไม่มีข้อมูลบัญชีในแผนที่นี้ — กรุณารัน Script ใน Roblox ก่อนนะ</td></tr>`;
+    
+    // Toggle display properties of columns even for empty state
+    document.querySelectorAll(".col-toilet").forEach(el => el.style.display = showToilet ? "" : "none");
+    document.querySelectorAll(".col-zombie").forEach(el => el.style.display = showZombie ? "" : "none");
+    document.querySelectorAll(".col-coins").forEach(el => el.style.display = showCoins ? "" : "none");
+    if (totalCoinsEl && totalCoinsEl.parentElement) {
+      totalCoinsEl.parentElement.style.display = showCoins ? "block" : "none";
+    }
     return;
   }
 
@@ -514,15 +542,15 @@ function render() {
     }
     const avatarUrl = avatarCache[p.userId] || "";
 
-    // Build column cells dynamically
-    const colCells = cols.map(c => {
-      if (c.isText) {
-        const val = u[c.key] || "—";
-        return `<td><span class="metric-text ${c.key.toLowerCase()}-metric">${escapeHtml(String(val))}</span></td>`;
-      }
-      const val = c.getter ? c.getter(u) : Number(u[c.key] || 0);
-      return `<td><span class="metric-number ${c.key.toLowerCase()}-metric">${formatNumber(val)}</span></td>`;
-    }).join("");
+    // Metrics for Toilet Tower Defense
+    const utc = Number(u.UTC ?? u.utc ?? 0);
+    const uts = Number(u.UTS ?? u.uts ?? 0);
+    const cinema = cinemaCount(u);
+
+    // Metrics for Survive Zombie Arena
+    const credits = Number(u.Credits ?? u.credits ?? 0);
+    const voidShards = Number(u.VoidShards ?? u.voidshards ?? u.void_shards ?? 0);
+    const szaClass = u.Class ?? u.class ?? u.SelectedClass ?? "—";
 
     return `
       <tr>
@@ -539,8 +567,18 @@ function render() {
             </div>
           </div>
         </td>
-        ${showCoins ? `<td><span class="metric-number coin-metric">${formatNumber(p.coins)}</span></td>` : ""}
-        ${colCells}
+        <td class="col-coins"><span class="metric-number coin-metric">${formatNumber(p.coins)}</span></td>
+        
+        <!-- Survive Zombie Arena -->
+        <td class="col-zombie"><span class="metric-number credits-metric">${formatNumber(credits)}</span></td>
+        <td class="col-zombie"><span class="metric-number voidshards-metric">${formatNumber(voidShards)}</span></td>
+        <td class="col-zombie"><span class="metric-text class-metric">${escapeHtml(szaClass)}</span></td>
+
+        <!-- Toilet Tower Defense -->
+        <td class="col-toilet"><span class="metric-number utc-metric">${formatNumber(utc)}</span></td>
+        <td class="col-toilet"><span class="metric-number uts-metric">${formatNumber(uts)}</span></td>
+        <td class="col-toilet"><span class="metric-number cinema-metric">${formatNumber(cinema)}</span></td>
+
         <td>
           <span class="status-pill ${statusCls}">
             <span class="status-dot"></span>
@@ -551,7 +589,7 @@ function render() {
         <td>
           <button class="btn-delete-roster-id" data-delete-id="${escapeHtml(String(p.userId || p.id || ""))}" data-delete-name="${escapeHtml(p.displayName || p.name || "")}" title="ลบไอดีออกจากระบบ">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            <span>ลบไอดี</span>
+            <span>DELETE</span>
           </button>
         </td>
       </tr>`;
@@ -573,6 +611,16 @@ function render() {
       }
     });
   });
+
+  // Toggle display properties of columns (both th in thead and new td in tbody)
+  document.querySelectorAll(".col-toilet").forEach(el => el.style.display = showToilet ? "" : "none");
+  document.querySelectorAll(".col-zombie").forEach(el => el.style.display = showZombie ? "" : "none");
+  document.querySelectorAll(".col-coins").forEach(el => el.style.display = showCoins ? "" : "none");
+
+  // Show hide the Coins total element wrapper
+  if (totalCoinsEl && totalCoinsEl.parentElement) {
+    totalCoinsEl.parentElement.style.display = showCoins ? "block" : "none";
+  }
 }
 
 
@@ -637,13 +685,6 @@ async function loadMe() {
       userAvatarInitialsEl.textContent = username.substring(0, 1).toUpperCase();
     }
 
-    // Update Script Key
-    if (scriptKeyEl) {
-      scriptKeyEl.textContent = user.script_key || "ยังไม่มี Script Key";
-    }
-
-    currentKey = user.script_key || null;
-
     // Render linked accounts list
     linkedAccounts = user.roblox_accounts || [];
     if (accountsCountEl) accountsCountEl.textContent = linkedAccounts.length;
@@ -697,27 +738,30 @@ async function loadPlayers() {
 }
 
 // ── Bind Event Listeners ──────────────────────────────────────────────────────
-scriptKeyCopyBtn?.addEventListener("click", () => {
-  const key = scriptKeyEl?.textContent?.trim();
-
-  if (!key || key.includes("กำลัง") || key.includes("ไม่มี") || key.includes("ล้มเหลว")) {
-    showToast("ยังไม่มีคีย์ให้คัดลอกในขณะนี้", "warn");
-    return;
+saveKeyBtn?.addEventListener("click", () => {
+  const keyVal = manualScriptKeyEl?.value.trim() || "";
+  localStorage.setItem("manual_script_key", keyVal);
+  if (window.Swal) {
+    Swal.fire({
+      icon: 'success',
+      title: 'บันทึกสำเร็จ!',
+      text: 'บันทึกคีย์ส่วนตัวเรียบร้อยแล้ว',
+      timer: 1500,
+      showConfirmButton: false,
+      background: '#12141a',
+      color: '#f8f9fa'
+    });
+  } else {
+    showToast("บันทึกคีย์เรียบร้อยแล้ว ✓", "ok");
   }
-
-  copyToClipboard(key);
 });
 
 copyAllBtn?.addEventListener("click", async () => {
-  if (!currentKey) {
-    showToast("กรุณารอโหลด หรือเชื่อมโยงบัญชีเพื่อรับคีย์ก่อน", "warn");
-    return;
-  }
-
+  const keyVal = localStorage.getItem("manual_script_key") || "";
   try {
     showToast("กำลังคอมไพล์สคริปต์...", "info");
 
-    const script = await buildLuaScript(currentKey);
+    const script = await buildLuaScript(keyVal);
 
     if (!script || script.trim().length < 20) {
       showToast("ไฟล์สคริปต์ message.txt ว่างหรือบกพร่อง", "error");
@@ -839,6 +883,11 @@ sortSelect?.addEventListener("change", render);
 (async () => {
   const ok = await initGuard();
   if (!ok) return;
+
+  // Initialize manual script key input from LocalStorage
+  if (manualScriptKeyEl) {
+    manualScriptKeyEl.value = localStorage.getItem("manual_script_key") || "";
+  }
 
   await ensureToken();
   await loadMe();
